@@ -11,9 +11,11 @@ export interface GameState {
   readMailIds: string[]
   secretFolderUnlocked: boolean
   fieldChannelUnlocked: boolean
+  lensLayerUnlocked: boolean
   stegoExtractSeen: boolean
   contrastHintSeen: boolean
   audioSpectrogramSeen: boolean
+  metadataExifSeen: boolean
   viewedFileIds: string[]
   terminalAttempts: number
 }
@@ -29,9 +31,11 @@ export const INITIAL_STATE: GameState = {
   readMailIds: [],
   secretFolderUnlocked: false,
   fieldChannelUnlocked: false,
+  lensLayerUnlocked: false,
   stegoExtractSeen: false,
   contrastHintSeen: false,
   audioSpectrogramSeen: false,
+  metadataExifSeen: false,
   viewedFileIds: [],
   terminalAttempts: 0,
 }
@@ -50,7 +54,9 @@ export type GameAction =
   | { type: 'MARK_FILE_VIEWED'; id: string }
   | { type: 'UNLOCK_SECRET_FOLDER' }
   | { type: 'UNLOCK_FIELD_CHANNEL' }
+  | { type: 'UNLOCK_LENS_LAYER' }
   | { type: 'TERMINAL_FAIL' }
   | { type: 'STEGO_EXTRACT_SEEN' }
   | { type: 'CONTRAST_HINT_SEEN' }
   | { type: 'AUDIO_SPECTROGRAM_SEEN' }
+  | { type: 'EXIF_METADATA_SEEN' }

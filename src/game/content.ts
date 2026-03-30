@@ -15,6 +15,16 @@ export const LOCKED_FOLDER_NAME = 'Личный архив'
 /** Вторая запертая папка — по паролю из записи */
 export const FIELD_CHANNEL_FOLDER_NAME = 'Полевой канал'
 
+/** Пароль из поля UserComment в EXIF кадра `objekt_5_13.jpg` → папка «Слой съёмки» */
+export const EXIF_METADATA_PASSWORD = 'obj513'
+
+/** Третья запертая папка */
+export const METADATA_LAYER_FOLDER_NAME = 'Слой съёмки'
+
+/** Кадр объекта с метаданными (оригинал в `public/`) */
+export const METADATA_PHOTO_FILENAME = 'objekt_5_13.jpg'
+export const METADATA_PHOTO_PATH = '/objekt_5_13.jpg'
+
 /** Стего-снимок в `public/` (LSB уже в файле) */
 export const STEGO_ASSET_FILENAME = 'image (1).png'
 /** Пробел в имени — кодируем для URL */
@@ -48,6 +58,15 @@ export function isInsideFieldChannel(absPath: string): boolean {
       ? '/'
       : absPath.replace(/\/+$/, '') || '/'
   const p = '/' + FIELD_CHANNEL_FOLDER_NAME
+  return n === p || n.startsWith(p + '/')
+}
+
+export function isInsideMetadataLayer(absPath: string): boolean {
+  const n =
+    absPath === '' || absPath === '/'
+      ? '/'
+      : absPath.replace(/\/+$/, '') || '/'
+  const p = '/' + METADATA_LAYER_FOLDER_NAME
   return n === p || n.startsWith(p + '/')
 }
 
@@ -142,6 +161,18 @@ export const MAILS: MailDef[] = [
 — Лаборатория.`,
   },
   {
+    id: 'it-exif-hint',
+    from: 'ИТ поддержка <helpdesk@staff-portal.local>',
+    subject: 'Мини-гайд: EXIF у снимков',
+    date: '6 мар',
+    visible: () => true,
+    body: `Коллеги, при приёме цифровых вещдоков заглядывайте в свойства файла: блоки EXIF/XMP иногда содержат служебные строки, которых нет на самом изображении (комментарий съёмки, внутренний код, хвост синхронизации камеры).
+
+В полевых условиях — exiftool, «Свойства» в Проводнике Windows, «информация» в Preview на macOS, любой просмотрщик с EXIF. Файл objekt_5_13.jpg на копии носителя содержит настоящие EXIF: тот же набор можно увидеть и в игре после «Прочитать метаданные», и скачав оригинал.
+
+Служебные строки в комментариях к файлу встречаются чаще, чем хочется.`,
+  },
+  {
     id: 'spam-bank',
     from: '«Банк» <security-urgent@fake-bank.xyz>',
     subject: 'СРОЧНО: блокировка карты',
@@ -197,6 +228,22 @@ export const MAILS: MailDef[] = [
 
 — Наблюдатель.`,
   },
+  {
+    id: 'killer-lens-layer',
+    from: 'без адреса <void>',
+    subject: 'Ты поднял слой',
+    date: 'только что',
+    visible: (s) => s.lensLayerUnlocked,
+    body: `Ты полез не в пиксели, а в подпись к файлу. Аккуратно. Скучные люди смотрят только на картинку.
+
+Пароль из комментария — ключ от моей маленькой полки. Ты доказал, что умеешь читать то, что не светится на экране.
+
+Дальше — не здесь. Тот самый OMEN, что ты выцарапал из другого кадра, всё ещё ждёт своей очереди.
+
+Игра продолжается. Не зевай.
+
+— Наблюдатель.`,
+  },
 ]
 
 export function getVisibleMails(state: GameState): MailDef[] {
@@ -207,6 +254,7 @@ export type FileKind =
   | 'text'
   | 'photo-lsb'
   | 'photo-contrast'
+  | 'photo-exif-metadata'
   | 'audio-spectrogram'
 
 export type FileNode = {
@@ -293,6 +341,12 @@ export const FILE_TREE: FileNode[] = [
             type: 'file',
             fileKind: 'photo-contrast',
           },
+          {
+            id: 'photo-exif-obj',
+            name: 'objekt_5_13.jpg',
+            type: 'file',
+            fileKind: 'photo-exif-metadata',
+          },
         ],
       },
       {
@@ -356,6 +410,26 @@ export const FILE_TREE: FileNode[] = [
 Код с того кадра пригодится позже в сети — не выбрасывай.
 
 — архив полевых записей`,
+          },
+        ],
+      },
+      {
+        id: 'dir-lens-layer',
+        name: METADATA_LAYER_FOLDER_NAME,
+        type: 'dir',
+        lockedIf: (s) => !s.lensLayerUnlocked,
+        children: [
+          {
+            id: 'lens-readme',
+            name: 'приложение_к_кадру.txt',
+            type: 'file',
+            content: `Слой съёмки открыт по строке из EXIF. Кто вписал UserComment — уже не владелец камеры.
+
+OMEN-776 остаётся машинным хвостом с другого носителя. Здесь — только подтверждение: объект «−13» и время кадра не случайны.
+
+Следующий ход не на этом томе. Проверь почту после полуночи по местному — если ещё не пришло, ты опоздал не по времени, а по жанру.
+
+— тот же архивариус`,
           },
         ],
       },

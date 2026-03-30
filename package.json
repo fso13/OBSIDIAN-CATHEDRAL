@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run embed:exif && tsc -b && vite build",
+    "embed:exif": "node scripts/embed-exif-objekt.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "exifr": "^7.1.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
@@ -23,6 +25,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "piexifjs": "^1.0.6",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
     "vite": "^8.0.1"

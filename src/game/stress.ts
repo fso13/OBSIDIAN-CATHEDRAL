@@ -5,7 +5,8 @@ export function stressTier(state: GameState): 0 | 1 | 2 | 3 {
   if (
     state.stegoExtractSeen ||
     state.contrastHintSeen ||
-    state.audioSpectrogramSeen
+    state.audioSpectrogramSeen ||
+    state.metadataExifSeen
   )
     return 1
   return 0

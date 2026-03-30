@@ -1,13 +1,15 @@
 import { type FormEvent, useState } from 'react'
 import {
   AUDIO_MORSE_PASSWORD,
+  EXIF_METADATA_PASSWORD,
   FIELD_CHANNEL_FOLDER_NAME,
   LOCKED_FOLDER_NAME,
+  METADATA_LAYER_FOLDER_NAME,
   SECRET_FOLDER_PASSWORD,
 } from '../game/content'
 import type { GameAction } from '../game/types'
 
-export type FolderUnlockTarget = 'secret' | 'field'
+export type FolderUnlockTarget = 'secret' | 'field' | 'metadata'
 
 type Props = {
   open: boolean
@@ -16,6 +18,7 @@ type Props = {
   dispatch: (action: GameAction) => void
   secretFolderUnlocked: boolean
   fieldChannelUnlocked: boolean
+  lensLayerUnlocked: boolean
 }
 
 export function FolderPasswordModal({
@@ -25,6 +28,7 @@ export function FolderPasswordModal({
   dispatch,
   secretFolderUnlocked,
   fieldChannelUnlocked,
+  lensLayerUnlocked,
 }: Props) {
   const [value, setValue] = useState('')
   const [err, setErr] = useState<string | null>(null)
@@ -32,9 +36,17 @@ export function FolderPasswordModal({
   if (!open || !target) return null
 
   const title =
-    target === 'secret' ? LOCKED_FOLDER_NAME : FIELD_CHANNEL_FOLDER_NAME
+    target === 'secret'
+      ? LOCKED_FOLDER_NAME
+      : target === 'field'
+        ? FIELD_CHANNEL_FOLDER_NAME
+        : METADATA_LAYER_FOLDER_NAME
   const alreadyOk =
-    target === 'secret' ? secretFolderUnlocked : fieldChannelUnlocked
+    target === 'secret'
+      ? secretFolderUnlocked
+      : target === 'field'
+        ? fieldChannelUnlocked
+        : lensLayerUnlocked
 
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -52,6 +64,12 @@ export function FolderPasswordModal({
     }
     if (target === 'field' && v === AUDIO_MORSE_PASSWORD) {
       dispatch({ type: 'UNLOCK_FIELD_CHANNEL' })
+      setValue('')
+      onClose()
+      return
+    }
+    if (target === 'metadata' && v === EXIF_METADATA_PASSWORD) {
+      dispatch({ type: 'UNLOCK_LENS_LAYER' })
       setValue('')
       onClose()
       return

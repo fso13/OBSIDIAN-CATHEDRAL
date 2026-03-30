@@ -627,6 +627,26 @@
   vertical-align: middle;
 }
 
+.evidence-photo-img {
+  display: block;
+  width: 100%;
+  max-width: min(560px, 100%);
+  height: auto;
+  vertical-align: middle;
+}
+
+.exif-photo-lead {
+  margin: 0 0 0.65rem;
+}
+
+.exif-dump {
+  margin-top: 0.75rem;
+  max-height: min(42vh, 320px);
+  overflow: auto;
+  font-size: 0.74rem;
+  color: #c8d4e0;
+}
+
 .evidence-photo-slider-label {
   display: flex;
   align-items: center;

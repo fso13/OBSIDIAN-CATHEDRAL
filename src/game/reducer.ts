@@ -48,6 +48,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, secretFolderUnlocked: true }
     case 'UNLOCK_FIELD_CHANNEL':
       return { ...state, fieldChannelUnlocked: true }
+    case 'UNLOCK_LENS_LAYER':
+      return { ...state, lensLayerUnlocked: true }
     case 'TERMINAL_FAIL':
       return { ...state, terminalAttempts: state.terminalAttempts + 1 }
     case 'STEGO_EXTRACT_SEEN':
@@ -56,6 +58,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, contrastHintSeen: true }
     case 'AUDIO_SPECTROGRAM_SEEN':
       return { ...state, audioSpectrogramSeen: true }
+    case 'EXIF_METADATA_SEEN':
+      return { ...state, metadataExifSeen: true }
     default:
       return state
   }

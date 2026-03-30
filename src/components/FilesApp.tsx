@@ -8,6 +8,7 @@ import {
 } from '../game/content'
 import type { GameAction, GameState } from '../game/types'
 import { AudioEvidencePanel } from './AudioEvidencePanel'
+import { ExifPhotoPanel } from './ExifPhotoPanel'
 import { ContrastPhotoPanel } from './ContrastPhotoPanel'
 import {
   FolderPasswordModal,
@@ -82,6 +83,7 @@ export function FilesApp({
         dispatch={dispatch}
         secretFolderUnlocked={state.secretFolderUnlocked}
         fieldChannelUnlocked={state.fieldChannelUnlocked}
+        lensLayerUnlocked={state.lensLayerUnlocked}
       />
       <header className="window-head">
         <span>Проводник · копия ПК</span>
@@ -121,6 +123,8 @@ export function FilesApp({
                             setPasswordTarget('secret')
                           } else if (child.id === 'dir-field-channel') {
                             setPasswordTarget('field')
+                          } else if (child.id === 'dir-lens-layer') {
+                            setPasswordTarget('metadata')
                           }
                           return
                         }
@@ -140,7 +144,9 @@ export function FilesApp({
                             ? '📷'
                             : child.fileKind === 'audio-spectrogram'
                               ? '🎵'
-                              : '📄'}
+                              : child.fileKind === 'photo-exif-metadata'
+                                ? '📷'
+                                : '📄'}
                       </span>
                       <span>
                         {child.name}
@@ -169,6 +175,12 @@ export function FilesApp({
             selectedNode.fileKind === 'audio-spectrogram' ? (
             <AudioEvidencePanel
               audioSpectrogramSeen={state.audioSpectrogramSeen}
+              dispatch={dispatch}
+            />
+          ) : selectedNode?.type === 'file' &&
+            selectedNode.fileKind === 'photo-exif-metadata' ? (
+            <ExifPhotoPanel
+              metadataExifSeen={state.metadataExifSeen}
               dispatch={dispatch}
             />
           ) : selectedNode?.type === 'file' && selectedNode.content ? (

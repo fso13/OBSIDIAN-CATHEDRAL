@@ -45,6 +45,10 @@ export function mergeWithDefaults(partial: GameState): GameState {
       typeof partial.fieldChannelUnlocked === 'boolean'
         ? partial.fieldChannelUnlocked
         : false,
+    lensLayerUnlocked:
+      typeof partial.lensLayerUnlocked === 'boolean'
+        ? partial.lensLayerUnlocked
+        : false,
     stegoExtractSeen:
       typeof partial.stegoExtractSeen === 'boolean'
         ? partial.stegoExtractSeen
@@ -56,6 +60,10 @@ export function mergeWithDefaults(partial: GameState): GameState {
     audioSpectrogramSeen:
       typeof partial.audioSpectrogramSeen === 'boolean'
         ? partial.audioSpectrogramSeen
+        : false,
+    metadataExifSeen:
+      typeof partial.metadataExifSeen === 'boolean'
+        ? partial.metadataExifSeen
         : false,
     terminalAttempts:
       typeof partial.terminalAttempts === 'number' ? partial.terminalAttempts : 0,

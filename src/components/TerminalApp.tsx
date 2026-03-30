@@ -7,10 +7,13 @@ import {
 } from 'react'
 import {
   AUDIO_MORSE_PASSWORD,
+  EXIF_METADATA_PASSWORD,
   FIELD_CHANNEL_FOLDER_NAME,
   isInsideFieldChannel,
+  isInsideMetadataLayer,
   isInsideSecretFolder,
   isNodeLocked,
+  METADATA_LAYER_FOLDER_NAME,
   SECRET_FOLDER_PASSWORD,
 } from '../game/content'
 import type { GameAction, GameState } from '../game/types'
@@ -33,6 +36,7 @@ function canAccessPath(absPath: string, state: GameState): boolean {
   const n = normalizePath('/', absPath)
   if (!state.secretFolderUnlocked && isInsideSecretFolder(n)) return false
   if (!state.fieldChannelUnlocked && isInsideFieldChannel(n)) return false
+  if (!state.lensLayerUnlocked && isInsideMetadataLayer(n)) return false
   return true
 }
 
@@ -138,6 +142,8 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
           `контраст_2..... ${state.contrastHintSeen ? 'да' : 'нет'}`,
           `спектр_аудио.. ${state.audioSpectrogramSeen ? 'да' : 'нет'}`,
           `полевой_канал ${state.fieldChannelUnlocked ? 'ОТКРЫТ' : 'ЗАКРЫТ'}`,
+          `слой_съёмки.. ${state.lensLayerUnlocked ? 'ОТКРЫТ' : 'ЗАКРЫТ'}`,
+          `exif.......... ${state.metadataExifSeen ? 'да' : 'нет'}`,
         ])
         return
       }
@@ -228,7 +234,8 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
         if (
           node.fileKind === 'photo-lsb' ||
           node.fileKind === 'photo-contrast' ||
-          node.fileKind === 'audio-spectrogram'
+          node.fileKind === 'audio-spectrogram' ||
+          node.fileKind === 'photo-exif-metadata'
         ) {
           append([`${node.name}: смотреть в «Файлы».`])
           return
@@ -268,6 +275,18 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
           append([
             'Пароль принят.',
             `Папка «${FIELD_CHANNEL_FOLDER_NAME}» разблокирована.`,
+          ])
+          return
+        }
+        if (bare === EXIF_METADATA_PASSWORD) {
+          if (state.lensLayerUnlocked) {
+            append(['Слой съёмки уже открыт.'])
+            return
+          }
+          dispatch({ type: 'UNLOCK_LENS_LAYER' })
+          append([
+            'Пароль принят.',
+            `Папка «${METADATA_LAYER_FOLDER_NAME}» разблокирована.`,
           ])
           return
         }
