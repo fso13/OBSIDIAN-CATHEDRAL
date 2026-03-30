@@ -7,8 +7,12 @@ import {
   type FileNode,
 } from '../game/content'
 import type { GameAction, GameState } from '../game/types'
+import { AudioEvidencePanel } from './AudioEvidencePanel'
 import { ContrastPhotoPanel } from './ContrastPhotoPanel'
-import { FolderPasswordModal } from './FolderPasswordModal'
+import {
+  FolderPasswordModal,
+  type FolderUnlockTarget,
+} from './FolderPasswordModal'
 import { StegoPhotoPanel } from './StegoPhotoPanel'
 
 type Props = {
@@ -28,7 +32,8 @@ export function FilesApp({
   onViewFile,
   dispatch,
 }: Props) {
-  const [passwordOpen, setPasswordOpen] = useState(false)
+  const [passwordTarget, setPasswordTarget] =
+    useState<FolderUnlockTarget | null>(null)
 
   const dirId = resolveFilesDirId(state.filesDirId)
 
@@ -71,10 +76,12 @@ export function FilesApp({
   return (
     <div className="window files-window">
       <FolderPasswordModal
-        open={passwordOpen}
-        onClose={() => setPasswordOpen(false)}
+        open={passwordTarget !== null}
+        target={passwordTarget}
+        onClose={() => setPasswordTarget(null)}
         dispatch={dispatch}
-        alreadyUnlocked={state.secretFolderUnlocked}
+        secretFolderUnlocked={state.secretFolderUnlocked}
+        fieldChannelUnlocked={state.fieldChannelUnlocked}
       />
       <header className="window-head">
         <span>Проводник · копия ПК</span>
@@ -110,7 +117,11 @@ export function FilesApp({
                       className={`file-row ${state.filesSelectedFileId === child.id ? 'active' : ''}`}
                       onClick={() => {
                         if (child.type === 'dir' && locked) {
-                          setPasswordOpen(true)
+                          if (child.id === 'dir-sealed') {
+                            setPasswordTarget('secret')
+                          } else if (child.id === 'dir-field-channel') {
+                            setPasswordTarget('field')
+                          }
                           return
                         }
                         if (child.type === 'dir') {
@@ -127,7 +138,9 @@ export function FilesApp({
                           : child.fileKind === 'photo-lsb' ||
                               child.fileKind === 'photo-contrast'
                             ? '📷'
-                            : '📄'}
+                            : child.fileKind === 'audio-spectrogram'
+                              ? '🎵'
+                              : '📄'}
                       </span>
                       <span>
                         {child.name}
@@ -150,6 +163,12 @@ export function FilesApp({
             selectedNode.fileKind === 'photo-contrast' ? (
             <ContrastPhotoPanel
               contrastHintSeen={state.contrastHintSeen}
+              dispatch={dispatch}
+            />
+          ) : selectedNode?.type === 'file' &&
+            selectedNode.fileKind === 'audio-spectrogram' ? (
+            <AudioEvidencePanel
+              audioSpectrogramSeen={state.audioSpectrogramSeen}
               dispatch={dispatch}
             />
           ) : selectedNode?.type === 'file' && selectedNode.content ? (

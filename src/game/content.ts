@@ -6,8 +6,14 @@ export const SECRET_FOLDER_PASSWORD = 'blackwood'
 /** Второй снимок — проявляется контрастом; пригодится позже в сюжете */
 export const FUTURE_PASSWORD_HINT = 'OMEN-776'
 
+/** Пароль в морзе на аудиодорожке; открывает папку «Полевой канал» */
+export const AUDIO_MORSE_PASSWORD = 'winter'
+
 /** Сегмент пути и имя папки в проводнике */
 export const LOCKED_FOLDER_NAME = 'Личный архив'
+
+/** Вторая запертая папка — по паролю из записи */
+export const FIELD_CHANNEL_FOLDER_NAME = 'Полевой канал'
 
 /** Стего-снимок в `public/` (LSB уже в файле) */
 export const STEGO_ASSET_FILENAME = 'image (1).png'
@@ -17,6 +23,10 @@ export const STEGO_ASSET_PATH = '/image%20(1).png'
 /** Размытый скрин — проявляется контрастом (`скрин_монитор_размыто.jpg` в проводнике) */
 export const CONTRAST_ASSET_FILENAME = 'skrin_monitor_razmyto (2).png'
 export const CONTRAST_ASSET_PATH = '/skrin_monitor_razmyto%20(2).png'
+
+/** Запись с объекта «−13» — сырая дорожка в `public/` */
+export const AUDIO_ASSET_FILENAME = 'zapis_diktofon_minus13.wav'
+export const AUDIO_ASSET_PATH = '/zapis_diktofon_minus13.wav'
 
 export function secretFolderPrefixes(): string[] {
   const base = '/' + LOCKED_FOLDER_NAME
@@ -30,6 +40,15 @@ export function isInsideSecretFolder(absPath: string): boolean {
       : absPath.replace(/\/+$/, '') || '/'
   const sealed = '/' + LOCKED_FOLDER_NAME
   return n === sealed || n.startsWith(sealed + '/')
+}
+
+export function isInsideFieldChannel(absPath: string): boolean {
+  const n =
+    absPath === '' || absPath === '/'
+      ? '/'
+      : absPath.replace(/\/+$/, '') || '/'
+  const p = '/' + FIELD_CHANNEL_FOLDER_NAME
+  return n === p || n.startsWith(p + '/')
 }
 
 export type MailDef = {
@@ -93,6 +112,36 @@ export const MAILS: MailDef[] = [
 — Редколлегия.`,
   },
   {
+    id: 'field-channel-unlocked',
+    from: 'нет отправителя',
+    subject: 'ты открыл канал',
+    date: 'сейчас',
+    visible: (s) => s.fieldChannelUnlocked,
+    body: `Физический слой совпал с цифровым. Ты услышал то, что на бумаге не напечатают.
+
+Вторая подсказка всё ещё на картинке с монитором — там другая игра, не морзе.
+
+Смотри на почту. Смотри на файл.
+
+— Н.`,
+  },
+  {
+    id: 'lab-audio-spectrogram',
+    from: 'Секция акустики <acoustic@forensic-lab.local>',
+    subject: 'Слабые вызовы и азбука Морзе',
+    date: '7 мар',
+    visible: () => true,
+    body: `Коллеги, при разборе записей не останавливайтесь на одном прослушивании.
+
+На полевых копиях слабая несущая и «телеграф» (Морзе) удобнее держать в спектрограмме (Audacity → Spectrogram, Sonic Visualiser).
+
+Расшифровка — таблица ITU; пауза между буквами длиннее, чем между точкой и тире внутри буквы.
+
+На учебной копии ноутбука дорожка в «Документах» без лишнего шума: так проще отработать слухом, затем — встроенный спектр в проводнике.
+
+— Лаборатория.`,
+  },
+  {
     id: 'spam-bank',
     from: '«Банк» <security-urgent@fake-bank.xyz>',
     subject: 'СРОЧНО: блокировка карты',
@@ -154,7 +203,11 @@ export function getVisibleMails(state: GameState): MailDef[] {
   return MAILS.filter((m) => m.visible(state))
 }
 
-export type FileKind = 'text' | 'photo-lsb' | 'photo-contrast'
+export type FileKind =
+  | 'text'
+  | 'photo-lsb'
+  | 'photo-contrast'
+  | 'audio-spectrogram'
 
 export type FileNode = {
   id: string
@@ -195,6 +248,12 @@ export const FILE_TREE: FileNode[] = [
             name: 'черновик_резюме.docx.txt',
             type: 'file',
             content: 'Черновик не закончен. Навыки: Excel, «общительность».',
+          },
+          {
+            id: 'doc-audio-minus13',
+            name: 'zapis_diktofon_minus13.wav',
+            type: 'file',
+            fileKind: 'audio-spectrogram',
           },
         ],
       },
@@ -277,6 +336,26 @@ export const FILE_TREE: FileNode[] = [
 Но раз дошёл — сохраняй холод в голове. Следующая заготовка уже не на этом диске.
 
 Почта. Всегда почта.`,
+          },
+        ],
+      },
+      {
+        id: 'dir-field-channel',
+        name: FIELD_CHANNEL_FOLDER_NAME,
+        type: 'dir',
+        lockedIf: (s) => !s.fieldChannelUnlocked,
+        children: [
+          {
+            id: 'field-note',
+            name: 'канал_открыт.txt',
+            type: 'file',
+            content: `Голос по «Полевому каналу» — это не метафора. Ты прошёл по паролю из морзе.
+
+Дальше не вслух: вторая метка заложена на размытом скрине с монитора (Изображения). Там уже не точка‑тире — смотри уровни яркости и контраст.
+
+Код с того кадра пригодится позже в сети — не выбрасывай.
+
+— архив полевых записей`,
           },
         ],
       },

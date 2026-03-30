@@ -46,11 +46,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
     case 'UNLOCK_SECRET_FOLDER':
       return { ...state, secretFolderUnlocked: true }
+    case 'UNLOCK_FIELD_CHANNEL':
+      return { ...state, fieldChannelUnlocked: true }
     case 'TERMINAL_FAIL':
       return { ...state, terminalAttempts: state.terminalAttempts + 1 }
     case 'STEGO_EXTRACT_SEEN':
       return { ...state, stegoExtractSeen: true }
     case 'CONTRAST_HINT_SEEN':
       return { ...state, contrastHintSeen: true }
+    case 'AUDIO_SPECTROGRAM_SEEN':
+      return { ...state, audioSpectrogramSeen: true }
+    default:
+      return state
   }
 }

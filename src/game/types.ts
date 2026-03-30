@@ -10,8 +10,10 @@ export interface GameState {
   activeApp: 'mail' | 'files' | 'terminal' | null
   readMailIds: string[]
   secretFolderUnlocked: boolean
+  fieldChannelUnlocked: boolean
   stegoExtractSeen: boolean
   contrastHintSeen: boolean
+  audioSpectrogramSeen: boolean
   viewedFileIds: string[]
   terminalAttempts: number
 }
@@ -26,8 +28,10 @@ export const INITIAL_STATE: GameState = {
   activeApp: null,
   readMailIds: [],
   secretFolderUnlocked: false,
+  fieldChannelUnlocked: false,
   stegoExtractSeen: false,
   contrastHintSeen: false,
+  audioSpectrogramSeen: false,
   viewedFileIds: [],
   terminalAttempts: 0,
 }
@@ -45,6 +49,8 @@ export type GameAction =
   | { type: 'SELECT_FILE'; fileId: string | null }
   | { type: 'MARK_FILE_VIEWED'; id: string }
   | { type: 'UNLOCK_SECRET_FOLDER' }
+  | { type: 'UNLOCK_FIELD_CHANNEL' }
   | { type: 'TERMINAL_FAIL' }
   | { type: 'STEGO_EXTRACT_SEEN' }
   | { type: 'CONTRAST_HINT_SEEN' }
+  | { type: 'AUDIO_SPECTROGRAM_SEEN' }

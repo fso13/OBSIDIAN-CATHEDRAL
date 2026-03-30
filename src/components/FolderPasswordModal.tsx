@@ -1,35 +1,57 @@
 import { type FormEvent, useState } from 'react'
-import { LOCKED_FOLDER_NAME, SECRET_FOLDER_PASSWORD } from '../game/content'
+import {
+  AUDIO_MORSE_PASSWORD,
+  FIELD_CHANNEL_FOLDER_NAME,
+  LOCKED_FOLDER_NAME,
+  SECRET_FOLDER_PASSWORD,
+} from '../game/content'
 import type { GameAction } from '../game/types'
+
+export type FolderUnlockTarget = 'secret' | 'field'
 
 type Props = {
   open: boolean
+  target: FolderUnlockTarget | null
   onClose: () => void
   dispatch: (action: GameAction) => void
-  alreadyUnlocked: boolean
+  secretFolderUnlocked: boolean
+  fieldChannelUnlocked: boolean
 }
 
 export function FolderPasswordModal({
   open,
+  target,
   onClose,
   dispatch,
-  alreadyUnlocked,
+  secretFolderUnlocked,
+  fieldChannelUnlocked,
 }: Props) {
   const [value, setValue] = useState('')
   const [err, setErr] = useState<string | null>(null)
 
-  if (!open) return null
+  if (!open || !target) return null
+
+  const title =
+    target === 'secret' ? LOCKED_FOLDER_NAME : FIELD_CHANNEL_FOLDER_NAME
+  const alreadyOk =
+    target === 'secret' ? secretFolderUnlocked : fieldChannelUnlocked
 
   function submit(e: FormEvent) {
     e.preventDefault()
     setErr(null)
-    if (alreadyUnlocked) {
+    if (alreadyOk) {
       onClose()
       return
     }
     const v = value.trim().toLowerCase()
-    if (v === SECRET_FOLDER_PASSWORD) {
+    if (target === 'secret' && v === SECRET_FOLDER_PASSWORD) {
       dispatch({ type: 'UNLOCK_SECRET_FOLDER' })
+      setValue('')
+      onClose()
+      return
+    }
+    if (target === 'field' && v === AUDIO_MORSE_PASSWORD) {
+      dispatch({ type: 'UNLOCK_FIELD_CHANNEL' })
       setValue('')
       onClose()
       return
@@ -42,7 +64,7 @@ export function FolderPasswordModal({
     <div className="modal-root" role="dialog" aria-modal="true" aria-label="Пароль папки">
       <button type="button" className="modal-backdrop" aria-label="Закрыть" onClick={onClose} />
       <div className="modal-card">
-        <h2>«{LOCKED_FOLDER_NAME}»</h2>
+        <h2>«{title}»</h2>
         <form onSubmit={submit}>
           <input
             className="folder-pass-input"

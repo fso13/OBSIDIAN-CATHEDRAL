@@ -6,6 +6,9 @@ import {
   useState,
 } from 'react'
 import {
+  AUDIO_MORSE_PASSWORD,
+  FIELD_CHANNEL_FOLDER_NAME,
+  isInsideFieldChannel,
   isInsideSecretFolder,
   isNodeLocked,
   SECRET_FOLDER_PASSWORD,
@@ -29,6 +32,7 @@ type Props = {
 function canAccessPath(absPath: string, state: GameState): boolean {
   const n = normalizePath('/', absPath)
   if (!state.secretFolderUnlocked && isInsideSecretFolder(n)) return false
+  if (!state.fieldChannelUnlocked && isInsideFieldChannel(n)) return false
   return true
 }
 
@@ -132,6 +136,8 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
           `архив......... ${state.secretFolderUnlocked ? 'ОТКРЫТ' : 'ЗАКРЫТ'}`,
           `стего_1....... ${state.stegoExtractSeen ? 'да' : 'нет'}`,
           `контраст_2..... ${state.contrastHintSeen ? 'да' : 'нет'}`,
+          `спектр_аудио.. ${state.audioSpectrogramSeen ? 'да' : 'нет'}`,
+          `полевой_канал ${state.fieldChannelUnlocked ? 'ОТКРЫТ' : 'ЗАКРЫТ'}`,
         ])
         return
       }
@@ -221,7 +227,8 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
         }
         if (
           node.fileKind === 'photo-lsb' ||
-          node.fileKind === 'photo-contrast'
+          node.fileKind === 'photo-contrast' ||
+          node.fileKind === 'audio-spectrogram'
         ) {
           append([`${node.name}: смотреть в «Файлы».`])
           return
@@ -252,7 +259,19 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
           ])
           return
         }
-        if (bare && bare !== SECRET_FOLDER_PASSWORD) {
+        if (bare === AUDIO_MORSE_PASSWORD) {
+          if (state.fieldChannelUnlocked) {
+            append(['Полевой канал уже открыт.'])
+            return
+          }
+          dispatch({ type: 'UNLOCK_FIELD_CHANNEL' })
+          append([
+            'Пароль принят.',
+            `Папка «${FIELD_CHANNEL_FOLDER_NAME}» разблокирована.`,
+          ])
+          return
+        }
+        if (bare) {
           append(['Неверный пароль.'])
           dispatch({ type: 'TERMINAL_FAIL' })
           return

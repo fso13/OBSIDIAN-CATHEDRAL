@@ -581,6 +581,27 @@
   margin-bottom: 0.5rem;
 }
 
+.audio-evidence-lead {
+  margin: 0 0 0.65rem;
+  line-height: 1.45;
+}
+
+.audio-evidence-player {
+  display: block;
+  width: 100%;
+  max-width: 440px;
+  margin-bottom: 0.75rem;
+  border-radius: 8px;
+}
+
+.spectrogram-frame {
+  margin-top: 0.35rem;
+}
+
+.spectrogram-canvas {
+  image-rendering: auto;
+}
+
 .evidence-photo {
   text-align: left;
 }
