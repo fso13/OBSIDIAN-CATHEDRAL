@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import {
   FILE_TREE,
+  QUEST_LOCKS,
   findNodeById,
   resolveFilesDirId,
   type FileNode,
 } from '../game/content'
-import type { GameAction } from '../game/types'
+import type { GameAction, GameState } from '../game/types'
 
 const LAUNCH_LABEL: Record<string, string> = {
   mail: 'Почта',
@@ -25,12 +26,15 @@ type Props = {
   windowId: string
   filesDirId: string
   filesSelectedFileId: string | null
+  state: GameState
   dispatch: (action: GameAction) => void
 }
 
 function fileIcon(node: FileNode): string {
-  if (node.type === 'dir') return '📁'
+  if (node.type === 'dir') return node.locked ? '🔒📁' : '📁'
   if (node.fileKind === 'app-shortcut') return '⚙'
+  if (node.fileKind === 'image') return '🖼'
+  if (node.fileKind === 'audio') return '🎵'
   return '📄'
 }
 
@@ -38,6 +42,7 @@ export function FilesApp({
   windowId,
   filesDirId: filesDirIdProp,
   filesSelectedFileId,
+  state,
   dispatch,
 }: Props) {
   const dirId = resolveFilesDirId(filesDirIdProp)
@@ -99,9 +104,26 @@ export function FilesApp({
             <li key={child.id}>
               <button
                 type="button"
-                className={`file-row ${filesSelectedFileId === child.id ? 'active' : ''}`}
+                className={`file-row ${child.type === 'dir' ? 'file-row--dir' : ''} ${filesSelectedFileId === child.id ? 'active' : ''}`}
                 onClick={() => {
                   if (child.type === 'dir') {
+                    if (child.locked && !state.questUnlockedDirIds.includes(child.id)) {
+                      const pass = window.prompt(
+                        `Папка «${child.name}» защищена паролем. Введите пароль:`,
+                      )
+                      if (pass == null) return
+                      const expected = QUEST_LOCKS[child.id]
+                      if (!expected) return
+                      if (pass.trim().toLowerCase() !== expected.toLowerCase()) {
+                        window.alert('Неверный пароль.')
+                        return
+                      }
+                      dispatch({
+                        type: 'QUEST_UNLOCK_DIR',
+                        dirId: child.id,
+                        password: pass,
+                      })
+                    }
                     dispatch({
                       type: 'FILE_WINDOW_SET_DIR',
                       windowId,
@@ -116,6 +138,36 @@ export function FilesApp({
                     })
                     return
                   }
+                  if (child.fileKind === 'image') {
+                    dispatch({
+                      type: 'FILE_WINDOW_SELECT_FILE',
+                      windowId,
+                      fileId: child.id,
+                    })
+                    dispatch({ type: 'MARK_FILE_VIEWED', id: child.id })
+                    dispatch({
+                      type: 'OPEN_WINDOW',
+                      windowType: 'image-editor',
+                      mediaFileId: child.id,
+                      title: `Просмотр — ${child.name}`,
+                    })
+                    return
+                  }
+                  if (child.fileKind === 'audio') {
+                    dispatch({
+                      type: 'FILE_WINDOW_SELECT_FILE',
+                      windowId,
+                      fileId: child.id,
+                    })
+                    dispatch({ type: 'MARK_FILE_VIEWED', id: child.id })
+                    dispatch({
+                      type: 'OPEN_WINDOW',
+                      windowType: 'audio-player',
+                      mediaFileId: child.id,
+                      title: `Плеер — ${child.name}`,
+                    })
+                    return
+                  }
                   if (child.fileKind === 'text') {
                     dispatch({
                       type: 'FILE_WINDOW_SELECT_FILE',
@@ -123,6 +175,10 @@ export function FilesApp({
                       fileId: child.id,
                     })
                     dispatch({ type: 'MARK_FILE_VIEWED', id: child.id })
+                    if (child.id === 'intro-letter') {
+                      const endsAt = Date.now() + 15 * 60 * 1000
+                      dispatch({ type: 'QUEST_START_TIMER', endsAt })
+                    }
                     dispatch({
                       type: 'OPEN_WINDOW',
                       windowType: 'notepad',
@@ -173,6 +229,7 @@ export function FilesApp({
               ) : (
                 <p className="muted small">Пустой файл.</p>
               )}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className="btn primary"
@@ -187,9 +244,50 @@ export function FilesApp({
               >
                 Открыть в блокноте
               </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() =>
+                  dispatch({
+                    type: 'OPEN_WINDOW',
+                    windowType: 'notepad',
+                    title: `Свойства — ${selectedNode.name}`,
+                    notepadContent:
+                      `Имя: ${selectedNode.name}\n` +
+                      `ID: ${selectedNode.id}\n` +
+                      `Тип: файл\n` +
+                      (selectedNode.mtime ? `Изменён: ${selectedNode.mtime}\n` : ''),
+                  })
+                }
+              >
+                Свойства
+              </button>
+              </div>
             </div>
           ) : selectedNode?.type === 'file' && selectedNode.content ? (
             <pre className="preview-pre">{selectedNode.content}</pre>
+          ) : selectedNode?.type === 'file' ? (
+            <div className="text-preview">
+              <p className="muted small">Файл выбран.</p>
+              <button
+                type="button"
+                className="btn"
+                onClick={() =>
+                  dispatch({
+                    type: 'OPEN_WINDOW',
+                    windowType: 'notepad',
+                    title: `Свойства — ${selectedNode.name}`,
+                    notepadContent:
+                      `Имя: ${selectedNode.name}\n` +
+                      `ID: ${selectedNode.id}\n` +
+                      `Тип: файл\n` +
+                      (selectedNode.mtime ? `Изменён: ${selectedNode.mtime}\n` : ''),
+                  })
+                }
+              >
+                Свойства
+              </button>
+            </div>
           ) : (
             <p className="muted">Выберите файл или папку.</p>
           )}

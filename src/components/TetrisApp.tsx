@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { GameAction, GameState } from '../game/types'
 
 const COLS = 10
 const ROWS = 20
@@ -106,7 +107,12 @@ function spawn(b: number[][]): PieceState | null {
   return p
 }
 
-export function TetrisApp() {
+type Props = {
+  state: GameState
+  dispatch: (action: GameAction) => void
+}
+
+export function TetrisApp({ state, dispatch }: Props) {
   const [board, setBoard] = useState(() => emptyBoard())
   const [score, setScore] = useState(0)
   const [gameOver, setGameOver] = useState(false)
@@ -133,6 +139,7 @@ export function TetrisApp() {
       if (!next) {
         gameOverRef.current = true
         setGameOver(true)
+        dispatch({ type: 'TETRIS_GAME_OVER' })
         return
       }
       pieceRef.current = next
@@ -229,6 +236,9 @@ export function TetrisApp() {
         <div className="tetris-meta">
           <span>Счёт: {score}</span>
           {gameOver && <span className="tetris-over">Игра окончена</span>}
+          {gameOver && state.questStage >= 3 && (
+            <span className="tetris-over">signal: 13:37</span>
+          )}
           <button type="button" className="btn ghost" onClick={reset}>
             Заново
           </button>

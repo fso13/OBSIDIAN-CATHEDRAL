@@ -1,4 +1,10 @@
-import { FILE_TREE, WINDOW_DEFAULTS, findNodeById } from './content'
+import {
+  FILE_TREE,
+  QUEST_LOCKS,
+  QUEST_STAGE_BY_DIR,
+  WINDOW_DEFAULTS,
+  findNodeById,
+} from './content'
 import { mergeWithDefaults } from './persistence'
 import type { GameAction, GameState, ShellWindow } from './types'
 import { INITIAL_STATE } from './types'
@@ -64,6 +70,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         } else if (action.notepadLabel) {
           base.title = `Блокнот — ${action.notepadLabel}`
         }
+      }
+      if (
+        (action.windowType === 'image-editor' || action.windowType === 'audio-player') &&
+        typeof action.mediaFileId === 'string'
+      ) {
+        base.mediaFileId = action.mediaFileId
       }
       return {
         ...state,
@@ -183,6 +195,32 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
     case 'TERMINAL_FAIL':
       return { ...state, terminalAttempts: state.terminalAttempts + 1 }
+    case 'TETRIS_GAME_OVER':
+      if (state.tetrisGameOverSeen) return state
+      return { ...state, tetrisGameOverSeen: true }
+    case 'CHESS_PUZZLE_SOLVED':
+      if (state.chessPuzzleSolved) return state
+      return { ...state, chessPuzzleSolved: true }
+    case 'QUEST_START_TIMER': {
+      if (state.questTimerEndsAt != null) return state
+      return { ...state, questTimerEndsAt: action.endsAt }
+    }
+    case 'QUEST_UNLOCK_DIR': {
+      const expected = QUEST_LOCKS[action.dirId]
+      if (!expected) return state
+      const normalized = action.password.trim()
+      if (normalized.toLowerCase() !== expected.toLowerCase()) return state
+      if (state.questUnlockedDirIds.includes(action.dirId)) return state
+      const nextStage = Math.max(
+        state.questStage,
+        QUEST_STAGE_BY_DIR[action.dirId] ?? state.questStage,
+      )
+      return {
+        ...state,
+        questStage: nextStage,
+        questUnlockedDirIds: [...state.questUnlockedDirIds, action.dirId],
+      }
+    }
     case 'CALENDAR_ADD_ENTRY': {
       const id =
         typeof crypto !== 'undefined' && crypto.randomUUID

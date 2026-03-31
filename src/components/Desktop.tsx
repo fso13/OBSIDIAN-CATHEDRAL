@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getVisibleMails } from '../game/content'
 import { stressTier } from '../game/stress'
 import type { GameAction, GameState, ShellWindow } from '../game/types'
@@ -41,6 +41,7 @@ function renderWindowContent(
           windowId={win.id}
           filesDirId={win.filesDirId ?? 'root'}
           filesSelectedFileId={win.filesSelectedFileId ?? null}
+          state={state}
           dispatch={dispatch}
         />
       )
@@ -72,17 +73,17 @@ function renderWindowContent(
     case 'browser':
       return <BrowserApp state={state} dispatch={dispatch} />
     case 'image-editor':
-      return <ImageEditorApp />
+      return <ImageEditorApp mediaFileId={win.mediaFileId ?? null} />
     case 'audio-player':
-      return <AudioPlayerApp />
+      return <AudioPlayerApp mediaFileId={win.mediaFileId ?? null} />
     case 'video-player':
       return <VideoPlayerApp />
     case 'solitaire':
       return <SolitaireApp />
     case 'tetris':
-      return <TetrisApp />
+      return <TetrisApp state={state} dispatch={dispatch} />
     case 'chess':
-      return <ChessApp />
+      return <ChessApp state={state} dispatch={dispatch} />
     default:
       return null
   }
@@ -91,12 +92,28 @@ function renderWindowContent(
 export function Desktop({ state, dispatch, onNewGame }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [startOpen, setStartOpen] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
   const tier = stressTier(state)
   const visibleMails = useMemo(() => getVisibleMails(state), [state])
   const unreadCount = useMemo(
     () => visibleMails.filter((m) => !state.readMailIds.includes(m.id)).length,
     [visibleMails, state.readMailIds],
   )
+
+  useEffect(() => {
+    if (state.questTimerEndsAt == null) return
+    const t = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(t)
+  }, [state.questTimerEndsAt])
+
+  const timerText = useMemo(() => {
+    if (state.questTimerEndsAt == null) return null
+    const leftMs = Math.max(0, state.questTimerEndsAt - now)
+    const totalSec = Math.floor(leftMs / 1000)
+    const m = Math.floor(totalSec / 60)
+    const s = totalSec % 60
+    return `${m}:${String(s).padStart(2, '0')}`
+  }, [now, state.questTimerEndsAt])
 
   const sortedVisible = useMemo(
     () =>
@@ -156,7 +173,7 @@ export function Desktop({ state, dispatch, onNewGame }: Props) {
         </button>
         <button
           type="button"
-          className="desk-icon"
+          className="desk-icon desk-icon--mail"
           onClick={() => dispatch({ type: 'OPEN_WINDOW', windowType: 'mail' })}
         >
           <span className="ico-lg">✉</span>
@@ -171,7 +188,7 @@ export function Desktop({ state, dispatch, onNewGame }: Props) {
         </button>
         <button
           type="button"
-          className="desk-icon"
+          className="desk-icon desk-icon--trash"
           onClick={() =>
             dispatch({
               type: 'OPEN_WINDOW',
@@ -227,7 +244,9 @@ export function Desktop({ state, dispatch, onNewGame }: Props) {
         >
           Меню
         </button>
-        <span className="tb-meta">shell</span>
+        <span className="tb-meta">
+          {timerText ? `таймер ${timerText}` : 'shell'}
+        </span>
       </footer>
 
       <div className="windows-layer windows-layer--multi">

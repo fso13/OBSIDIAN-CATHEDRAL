@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import type { GameAction, GameState } from '../game/types'
 
 type Cell = { w: boolean; t: string } | null
 
@@ -149,10 +150,62 @@ function movesFor(
   return out
 }
 
-export function ChessApp() {
-  const [board, setBoard] = useState(startBoard)
+type Props = {
+  state: GameState
+  dispatch: (action: GameAction) => void
+}
+
+function mateInOneBoard(): Cell[][] {
+  const b = Array.from({ length: ROWS }, () => Array<Cell>(COLS).fill(null))
+  // Position from provided screenshot.
+  b[0][1] = { w: false, t: 'b' } // b8
+  b[0][2] = { w: false, t: 'n' } // c8
+  b[0][3] = { w: false, t: 'r' } // d8
+  b[0][4] = { w: true, t: 'r' } // e8
+  b[0][7] = { w: false, t: 'n' } // h8
+
+  b[1][2] = { w: true, t: 'r' } // c7
+  b[1][3] = { w: true, t: 'b' } // d7
+  b[1][4] = { w: false, t: 'q' } // e7
+  b[1][5] = { w: true, t: 'n' } // f7
+  b[1][7] = { w: true, t: 'b' } // h7
+
+  b[2][1] = { w: true, t: 'p' } // b6
+  b[2][5] = { w: true, t: 'p' } // f6
+  b[2][6] = { w: false, t: 'q' } // g6
+  b[2][7] = { w: false, t: 'p' } // h6
+
+  b[3][0] = { w: true, t: 'q' } // a5
+
+  b[4][0] = { w: true, t: 'n' } // a4
+  b[4][4] = { w: false, t: 'k' } // e4
+
+  b[5][7] = { w: true, t: 'r' } // h3
+
+  b[6][1] = { w: true, t: 'q' } // b2
+  b[6][7] = { w: true, t: 'k' } // h2
+
+  b[7][1] = { w: false, t: 'r' } // b1
+  b[7][2] = { w: true, t: 'n' } // c1
+  b[7][3] = { w: false, t: 'n' } // d1
+  b[7][5] = { w: true, t: 'r' } // f1
+  b[7][7] = { w: true, t: 'n' } // h1
+  return b
+}
+
+export function ChessApp({ state, dispatch }: Props) {
+  const puzzleMode = !state.chessPuzzleSolved
+  const [board, setBoard] = useState(() =>
+    puzzleMode ? mateInOneBoard() : startBoard(),
+  )
   const [turn, setTurn] = useState(true)
   const [sel, setSel] = useState<[number, number] | null>(null)
+  const [hint, setHint] = useState<string | null>(null)
+
+  const target = useMemo(
+    () => ({ from: [3, 0] as [number, number], to: [0, 0] as [number, number] }), // Qa5-a8#
+    [],
+  )
 
   const whiteToMove = turn
 
@@ -164,6 +217,18 @@ export function ChessApp() {
         const opts = movesFor(board, sr, sc)
         const hit = opts.some(([tr, tc]) => tr === r && tc === c)
         if (hit) {
+          if (puzzleMode) {
+            const rightMove =
+              sr === target.from[0] &&
+              sc === target.from[1] &&
+              r === target.to[0] &&
+              c === target.to[1]
+            if (!rightMove) {
+              setHint('Не сходится. Мат должен быть в один ход.')
+              setSel(null)
+              return
+            }
+          }
           setBoard((b) => {
             const nb = b.map((row) => [...row])
             nb[r][c] = nb[sr][sc]
@@ -173,8 +238,17 @@ export function ChessApp() {
             }
             return nb
           })
+          if (puzzleMode) {
+            dispatch({ type: 'CHESS_PUZZLE_SOLVED' })
+            setHint('Мат. Письмо с кодом уже в почте.')
+            setBoard(startBoard())
+            setTurn(true)
+            setSel(null)
+            return
+          }
           setTurn((t) => !t)
           setSel(null)
+          setHint(null)
           return
         }
         if (cell && cell.w === whiteToMove) {
@@ -188,13 +262,14 @@ export function ChessApp() {
         setSel([r, c])
       }
     },
-    [board, sel, whiteToMove],
+    [board, dispatch, puzzleMode, sel, target.from, target.to, whiteToMove],
   )
 
   const reset = () => {
-    setBoard(startBoard())
+    setBoard(puzzleMode ? mateInOneBoard() : startBoard())
     setTurn(true)
     setSel(null)
+    setHint(null)
   }
 
   const legal = sel ? movesFor(board, sel[0], sel[1]) : []
@@ -203,7 +278,13 @@ export function ChessApp() {
     <div className="chess-window chess-window--embedded">
       <div className="chess-body">
         <div className="chess-bar">
-          <span>{whiteToMove ? 'Ход белых' : 'Ход чёрных'}</span>
+          <span>
+            {puzzleMode
+              ? 'Задача: белые ставят мат в 1 ход'
+              : whiteToMove
+                ? 'Ход белых'
+                : 'Ход чёрных'}
+          </span>
           <button type="button" className="btn ghost" onClick={reset}>
             Сброс
           </button>
@@ -234,8 +315,8 @@ export function ChessApp() {
           )}
         </div>
         <p className="muted small">
-          Упрощённые правила: без рокировки, взятия на проходе и шахов. Пешка на
-          краю превращается в ферзя.
+          {hint ??
+            'Упрощённые правила: без рокировки, взятия на проходе и шахов. Пешка на краю превращается в ферзя.'}
         </p>
       </div>
     </div>

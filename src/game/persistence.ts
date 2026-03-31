@@ -77,6 +77,12 @@ function normalizeWindow(raw: unknown): ShellWindow | null {
   if (w.type === 'notepad' && typeof w.notepadContent === 'string') {
     base.notepadContent = w.notepadContent
   }
+  if (
+    (w.type === 'image-editor' || w.type === 'audio-player') &&
+    typeof w.mediaFileId === 'string'
+  ) {
+    base.mediaFileId = w.mediaFileId
+  }
   return base
 }
 
@@ -151,7 +157,7 @@ export function mergeWithDefaults(partial: Partial<GameState>): GameState {
 
   const base: GameState = {
     ...INITIAL_STATE,
-    version: 5,
+    version: 6,
     phase: isPhase(partial.phase) ? partial.phase : INITIAL_STATE.phase,
     bootFinished:
       typeof partial.bootFinished === 'boolean'
@@ -184,6 +190,26 @@ export function mergeWithDefaults(partial: Partial<GameState>): GameState {
           .filter((h): h is BrowserHistoryItem => h !== null)
           .slice(0, 120)
       : INITIAL_STATE.browserHistory,
+    questStage:
+      typeof partial.questStage === 'number' && Number.isFinite(partial.questStage)
+        ? Math.max(0, Math.floor(partial.questStage))
+        : INITIAL_STATE.questStage,
+    questUnlockedDirIds: Array.isArray(partial.questUnlockedDirIds)
+      ? partial.questUnlockedDirIds.filter((v) => typeof v === 'string')
+      : INITIAL_STATE.questUnlockedDirIds,
+    questTimerEndsAt:
+      typeof partial.questTimerEndsAt === 'number' &&
+      Number.isFinite(partial.questTimerEndsAt)
+        ? partial.questTimerEndsAt
+        : INITIAL_STATE.questTimerEndsAt,
+    tetrisGameOverSeen:
+      typeof partial.tetrisGameOverSeen === 'boolean'
+        ? partial.tetrisGameOverSeen
+        : INITIAL_STATE.tetrisGameOverSeen,
+    chessPuzzleSolved:
+      typeof partial.chessPuzzleSolved === 'boolean'
+        ? partial.chessPuzzleSolved
+        : INITIAL_STATE.chessPuzzleSolved,
   }
   return base
 }
@@ -207,7 +233,7 @@ export function loadGameState(): GameState | null {
 
 export function saveGameState(state: GameState): void {
   if (typeof localStorage === 'undefined') return
-  const payload: GameState = { ...state, version: 5 }
+  const payload: GameState = { ...state, version: 6 }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
 }
 

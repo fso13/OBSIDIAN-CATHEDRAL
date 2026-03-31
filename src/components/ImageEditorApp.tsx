@@ -1,12 +1,27 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 
-export function ImageEditorApp() {
+type Props = {
+  mediaFileId?: string | null
+}
+
+export function ImageEditorApp({ mediaFileId = null }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [brightness, setBrightness] = useState(100)
   const [contrast, setContrast] = useState(100)
   const [hasImage, setHasImage] = useState(false)
   const imgRef = useRef<HTMLImageElement | null>(null)
   const fid = useId()
+  const mediaSrc = useMemo(() => {
+    const map: Record<string, string> = {
+      'img-wallpaper1': '/Desktop_Mirror/wallpaper1.png',
+      'img-screen-old': '/Desktop_Mirror/screen_old.jpg',
+      'img-family': '/Desktop_Mirror/family_photo.png',
+      'img-freeze': '/Desktop_Mirror/screenshot_freeze.png',
+      'img-corrupted': '/Desktop_Mirror/image_corrupted.png',
+      'trash-img': '/Desktop_Mirror/image_corrupted.png',
+    }
+    return mediaFileId ? map[mediaFileId] ?? null : null
+  }, [mediaFileId])
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current
@@ -31,6 +46,17 @@ export function ImageEditorApp() {
   useEffect(() => {
     paint()
   }, [paint])
+
+  useEffect(() => {
+    if (!mediaSrc) return
+    const img = new Image()
+    img.onload = () => {
+      imgRef.current = img
+      setHasImage(true)
+      paint()
+    }
+    img.src = mediaSrc
+  }, [mediaSrc, paint])
 
   const onFile = (file: File | null) => {
     if (!file || !file.type.startsWith('image/')) return
