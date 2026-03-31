@@ -10,8 +10,6 @@ export const SHELL_COMMANDS = [
   'history',
   'ls',
   'pwd',
-  'status',
-  'unlock',
   'whoami',
 ]
 
@@ -33,11 +31,12 @@ export function normalizePath(cwd: string, target: string): string {
 
 export function getNodeAtPath(absPath: string): FileNode | null {
   const path = absPath === '' ? '/' : absPath.replace(/\/$/, '') || '/'
-  if (path === '/') return root()
+  if (path === '/' || path === '/Ноутбук') return root()
 
-  const segments = path.slice(1).split('/')
+  const segments = path.slice(1).split('/').filter(Boolean)
   let cur: FileNode = root()
   for (const seg of segments) {
+    if (cur === root() && seg === root().name) continue
     if (cur.type !== 'dir' || !cur.children) return null
     const next = cur.children.find((c) => c.name === seg)
     if (!next) return null
@@ -49,19 +48,9 @@ export function getNodeAtPath(absPath: string): FileNode | null {
 export function listDir(absDir: string, _state: GameState): FileNode[] {
   const node = getNodeAtPath(absDir)
   if (!node || node.type !== 'dir' || !node.children) return []
-  return node.children.filter(() => true)
+  return node.children
 }
 
 export function listNames(absDir: string, state: GameState): string[] {
   return listDir(absDir, state).map((n) => n.name)
-}
-
-export function formatLsLine(node: FileNode, long: boolean): string {
-  if (!long) return node.name
-  const mode = node.type === 'dir' ? 'drwx------' : '-rw-------'
-  const sz =
-    node.type === 'dir' ? 4096 : (node.content?.length ?? node.id.length * 7)
-  const owner = 'user'
-  const grp = 'users'
-  return `${mode} 1 ${owner} ${grp} ${String(sz).padStart(6)} Mar 15 14:22 ${node.name}`
 }

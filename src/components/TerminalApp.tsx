@@ -5,20 +5,8 @@ import {
   useMemo,
   useState,
 } from 'react'
-import {
-  AUDIO_MORSE_PASSWORD,
-  EXIF_METADATA_PASSWORD,
-  FIELD_CHANNEL_FOLDER_NAME,
-  isInsideFieldChannel,
-  isInsideMetadataLayer,
-  isInsideSecretFolder,
-  isNodeLocked,
-  METADATA_LAYER_FOLDER_NAME,
-  SECRET_FOLDER_PASSWORD,
-} from '../game/content'
 import type { GameAction, GameState } from '../game/types'
 import {
-  formatLsLine,
   getNodeAtPath,
   listDir,
   listNames,
@@ -28,36 +16,13 @@ import {
 
 type Props = {
   state: GameState
-  onClose: () => void
   dispatch: (action: GameAction) => void
-}
-
-function canAccessPath(absPath: string, state: GameState): boolean {
-  const n = normalizePath('/', absPath)
-  if (!state.secretFolderUnlocked && isInsideSecretFolder(n)) return false
-  if (!state.fieldChannelUnlocked && isInsideFieldChannel(n)) return false
-  if (!state.lensLayerUnlocked && isInsideMetadataLayer(n)) return false
-  return true
-}
-
-function normalizeKey(line: string): string | null {
-  const t = line.trim().toLowerCase()
-  const unlock = t.match(/^unlock\s+(.+)$/)
-  if (unlock) return unlock[1]?.trim().replace(/\s+/g, '') ?? null
-  if (t.length > 0 && !/\s/.test(t)) return t
-  return null
 }
 
 function tokenize(line: string): string[] {
   const m = line.match(/(?:[^\s"]+|"[^"]*")+/g)
   if (!m) return []
   return m.map((s) => s.replace(/^"|"$/g, ''))
-}
-
-function helpLines(): string[] {
-  return [
-    'Команды: pwd · cd · ls [-la] [путь] · cat · echo · history · help · clear · whoami · status · unlock',
-  ]
 }
 
 function longestCommonPrefix(strs: string[]): string {
@@ -72,11 +37,17 @@ function longestCommonPrefix(strs: string[]): string {
   return pref
 }
 
-export function TerminalApp({ state, onClose, dispatch }: Props) {
+function helpLines(): string[] {
+  return [
+    'Команды: pwd · cd · ls · cat · echo · help · clear · history · whoami',
+  ]
+}
+
+export function TerminalApp({ state, dispatch }: Props) {
   const intro = useMemo(
     () => [
-      'Локальная копия профиля (volumes/user).',
-      'help — список команд.',
+      'Оболочка. Введите help.',
+      'Корень диска соответствует папке «Ноутбук».',
     ],
     [],
   )
@@ -88,8 +59,8 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
   const [histIndex, setHistIndex] = useState(-1)
 
   const prompt = useMemo(() => {
-    const tail = cwd === '/' ? '~' : cwd.replace(/^\//, '') || '/'
-    return `user@copy:${tail}$ `
+    const tail = cwd === '/' ? 'Ноутбук' : cwd.replace(/^\//, '')
+    return `user@pc:${tail}$ `
   }, [cwd])
 
   const append = useCallback((chunk: string[]) => {
@@ -114,16 +85,16 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
         return
       }
       if (cmd0 === 'whoami') {
-        append(['user', 'локальный том'])
+        append(['user'])
         return
       }
       if (cmd0 === 'pwd') {
-        append([cwd])
+        append([cwd === '/' ? '/Ноутбук' : cwd])
         return
       }
       if (cmd0 === 'history') {
         if (history.length === 0) {
-          append(['(история пуста)'])
+          append(['(пусто)'])
           return
         }
         for (let i = 0; i < history.length; i++) {
@@ -135,39 +106,23 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
         append([tokens.slice(1).join(' ')])
         return
       }
-      if (cmd0 === 'status') {
-        append([
-          `архив......... ${state.secretFolderUnlocked ? 'ОТКРЫТ' : 'ЗАКРЫТ'}`,
-          `стего_1....... ${state.stegoExtractSeen ? 'да' : 'нет'}`,
-          `контраст_2..... ${state.contrastHintSeen ? 'да' : 'нет'}`,
-          `спектр_аудио.. ${state.audioSpectrogramSeen ? 'да' : 'нет'}`,
-          `полевой_канал ${state.fieldChannelUnlocked ? 'ОТКРЫТ' : 'ЗАКРЫТ'}`,
-          `слой_съёмки.. ${state.lensLayerUnlocked ? 'ОТКРЫТ' : 'ЗАКРЫТ'}`,
-          `exif.......... ${state.metadataExifSeen ? 'да' : 'нет'}`,
-        ])
-        return
-      }
 
       if (cmd0 === 'cd') {
-        const target = tokens[1] ?? '~'
-        const dest =
-          target === '~' || target === ''
-            ? '/'
-            : normalizePath(cwd, target)
-        if (dest === cwd && target !== '..') {
+        const target = tokens[1] ?? ''
+        if (!target || target === '~') {
+          setCwd('/')
           return
         }
+        const dest = normalizePath(cwd, target)
         const node = getNodeAtPath(dest)
         if (!node) {
-          append([`cd: нет такого пути: ${target}`])
+          append([`cd: нет пути: ${target}`])
+          dispatch({ type: 'TERMINAL_FAIL' })
           return
         }
         if (node.type !== 'dir') {
-          append([`cd: не каталог: ${target}`])
-          return
-        }
-        if (isNodeLocked(node, state)) {
-          append(['cd: доступ запрещён. Нужен пароль к папке.'])
+          append([`cd: не каталог`])
+          dispatch({ type: 'TERMINAL_FAIL' })
           return
         }
         setCwd(dest === '' ? '/' : dest)
@@ -175,40 +130,27 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
       }
 
       if (cmd0 === 'ls') {
-        let long = false
-        let i = 1
-        while (i < tokens.length && tokens[i].startsWith('-')) {
-          const f = tokens[i]
-          if (f.includes('l')) long = true
-          i++
+        let pathTokIdx = 1
+        while (
+          pathTokIdx < tokens.length &&
+          tokens[pathTokIdx].startsWith('-')
+        ) {
+          pathTokIdx++
         }
-        const pathArg = tokens[i] ?? '.'
+        const pathArg = tokens[pathTokIdx] ?? '.'
         const abs = normalizePath(cwd, pathArg)
         const node = getNodeAtPath(abs)
         if (!node) {
-          append([`ls: нет доступа: ${pathArg}`])
+          append([`ls: нет доступа`])
+          dispatch({ type: 'TERMINAL_FAIL' })
           return
         }
         if (node.type !== 'dir') {
-          append([long ? formatLsLine(node, true) : node.name])
-          return
-        }
-        if (!canAccessPath(abs, state)) {
-          append([`ls: отказ: ${pathArg}`])
+          append([node.name])
           return
         }
         const kids = listDir(abs, state)
-        if (long) {
-          append(['total ' + String(kids.length)])
-          kids.forEach((k) => append([formatLsLine(k, true)]))
-        } else {
-          append([kids.map((k) => k.name).join('  ') || '(пусто)'])
-        }
-        return
-      }
-
-      if (cmd0 === 'unlock' && tokens.length === 1) {
-        append(['Использование: unlock <пароль>'])
+        append([kids.map((k) => k.name).join('  ') || '(пусто)'])
         return
       }
 
@@ -217,87 +159,32 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
           append(['cat: укажите файл'])
           return
         }
-        const abs = normalizePath(cwd, tokens[1])
+        const pathArg = tokens.slice(1).join(' ')
+        const abs = normalizePath(cwd, pathArg)
         const node = getNodeAtPath(abs)
         if (!node) {
-          append([`cat: нет файла: ${tokens[1]}`])
+          append([`cat: нет файла`])
+          dispatch({ type: 'TERMINAL_FAIL' })
           return
         }
         if (node.type === 'dir') {
-          append([`cat: это каталог: ${tokens[1]}`])
+          append([`cat: это каталог`])
           return
         }
-        if (!canAccessPath(abs, state)) {
-          append(['cat: доступ к пути закрыт.'])
-          return
-        }
-        if (
-          node.fileKind === 'photo-lsb' ||
-          node.fileKind === 'photo-contrast' ||
-          node.fileKind === 'audio-spectrogram' ||
-          node.fileKind === 'photo-exif-metadata'
-        ) {
-          append([`${node.name}: смотреть в «Файлы».`])
+        if (node.fileKind === 'app-shortcut') {
+          append(['cat: это приложение — откройте в проводнике.'])
           return
         }
         if (node.content) {
           append(node.content.split('\n'))
-          dispatch({ type: 'MARK_FILE_VIEWED', id: node.id })
         } else {
-          append(['(пустой файл)'])
+          append(['(пусто)'])
         }
         return
       }
 
-      const maybePassphrase =
-        (tokens.length === 1 && !SHELL_COMMANDS.includes(cmd0)) ||
-        (tokens.length === 2 && cmd0 === 'unlock')
-      if (maybePassphrase) {
-        const bare = normalizeKey(raw)
-        if (bare === SECRET_FOLDER_PASSWORD) {
-          if (state.secretFolderUnlocked) {
-            append(['Папка уже разблокирована.'])
-            return
-          }
-          dispatch({ type: 'UNLOCK_SECRET_FOLDER' })
-          append([
-            'Пароль принят.',
-            'Папка «Личный архив» разблокирована.',
-          ])
-          return
-        }
-        if (bare === AUDIO_MORSE_PASSWORD) {
-          if (state.fieldChannelUnlocked) {
-            append(['Полевой канал уже открыт.'])
-            return
-          }
-          dispatch({ type: 'UNLOCK_FIELD_CHANNEL' })
-          append([
-            'Пароль принят.',
-            `Папка «${FIELD_CHANNEL_FOLDER_NAME}» разблокирована.`,
-          ])
-          return
-        }
-        if (bare === EXIF_METADATA_PASSWORD) {
-          if (state.lensLayerUnlocked) {
-            append(['Слой съёмки уже открыт.'])
-            return
-          }
-          dispatch({ type: 'UNLOCK_LENS_LAYER' })
-          append([
-            'Пароль принят.',
-            `Папка «${METADATA_LAYER_FOLDER_NAME}» разблокирована.`,
-          ])
-          return
-        }
-        if (bare) {
-          append(['Неверный пароль.'])
-          dispatch({ type: 'TERMINAL_FAIL' })
-          return
-        }
-      }
-
-      append([`команда не найдена: ${cmd0}. Введите help.`])
+      append([`команда не найдена: ${cmd0}`])
+      dispatch({ type: 'TERMINAL_FAIL' })
     },
     [append, cwd, dispatch, history, prompt, state],
   )
@@ -356,8 +243,6 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
       ? normalizePath('/', dirPart.slice(0, -1) || '/')
       : normalizePath(cwd, dirPart.replace(/\/?$/, '/') || '.')
 
-    if (!canAccessPath(baseDir, state)) return false
-
     const namePrefix =
       lastTok.lastIndexOf('/') >= 0
         ? lastTok.slice(lastTok.lastIndexOf('/') + 1)
@@ -412,17 +297,11 @@ export function TerminalApp({ state, onClose, dispatch }: Props) {
   }
 
   return (
-    <div className="window terminal-window">
-      <header className="window-head">
-        <span>Терминал</span>
-        <button type="button" className="win-close" onClick={onClose}>
-          ×
-        </button>
-      </header>
+    <div className="terminal-window terminal-window--embedded">
       <div className="term-body">
         <div className="term-scroll" tabIndex={-1}>
           {lines.map((line, i) => (
-            <div key={`${i}-${line.slice(0, 20)}`} className="term-line">
+            <div key={`${i}-${line.slice(0, 24)}`} className="term-line">
               {line}
             </div>
           ))}

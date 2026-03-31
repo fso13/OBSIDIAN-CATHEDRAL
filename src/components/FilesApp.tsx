@@ -1,53 +1,48 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import {
   FILE_TREE,
   findNodeById,
-  isNodeLocked,
   resolveFilesDirId,
   type FileNode,
 } from '../game/content'
-import type { GameAction, GameState } from '../game/types'
-import { AudioEvidencePanel } from './AudioEvidencePanel'
-import { ExifPhotoPanel } from './ExifPhotoPanel'
-import { ContrastPhotoPanel } from './ContrastPhotoPanel'
-import {
-  FolderPasswordModal,
-  type FolderUnlockTarget,
-} from './FolderPasswordModal'
-import { StegoPhotoPanel } from './StegoPhotoPanel'
+import type { GameAction } from '../game/types'
+
+const LAUNCH_LABEL: Record<string, string> = {
+  mail: 'Почта',
+  calendar: 'Календарь',
+  terminal: 'Терминал',
+  notepad: 'Блокнот',
+  browser: 'Браузер',
+  'image-editor': 'Редактор изображений',
+  'audio-player': 'Аудио плеер',
+  'video-player': 'Видео плеер',
+  solitaire: 'Пасьянс',
+  tetris: 'Тетрис',
+  chess: 'Шахматы',
+}
 
 type Props = {
-  state: GameState
-  onClose: () => void
-  onDir: (dirId: string) => void
-  onSelectFile: (fileId: string | null) => void
-  onViewFile: (id: string) => void
+  windowId: string
+  filesDirId: string
+  filesSelectedFileId: string | null
   dispatch: (action: GameAction) => void
 }
 
+function fileIcon(node: FileNode): string {
+  if (node.type === 'dir') return '📁'
+  if (node.fileKind === 'app-shortcut') return '⚙'
+  return '📄'
+}
+
 export function FilesApp({
-  state,
-  onClose,
-  onDir,
-  onSelectFile,
-  onViewFile,
+  windowId,
+  filesDirId: filesDirIdProp,
+  filesSelectedFileId,
   dispatch,
 }: Props) {
-  const [passwordTarget, setPasswordTarget] =
-    useState<FolderUnlockTarget | null>(null)
+  const dirId = resolveFilesDirId(filesDirIdProp)
 
-  const dirId = resolveFilesDirId(state.filesDirId)
-
-  useEffect(() => {
-    if (dirId !== state.filesDirId) {
-      dispatch({ type: 'SET_FILES_DIR', dirId })
-    }
-  }, [dirId, state.filesDirId, dispatch])
-
-  const dirNode = useMemo(
-    () => findNodeById(FILE_TREE, dirId),
-    [dirId],
-  )
+  const dirNode = useMemo(() => findNodeById(FILE_TREE, dirId), [dirId])
 
   const crumbs = useMemo(() => {
     const crumbs: { id: string; name: string }[] = []
@@ -70,27 +65,14 @@ export function FilesApp({
     return crumbs
   }, [dirId])
 
-  const selectedNode = state.filesSelectedFileId
-    ? findNodeById(FILE_TREE, state.filesSelectedFileId)
+  const selectedNode = filesSelectedFileId
+    ? findNodeById(FILE_TREE, filesSelectedFileId)
     : null
 
+  const children = dirNode?.type === 'dir' ? dirNode.children ?? [] : []
+
   return (
-    <div className="window files-window">
-      <FolderPasswordModal
-        open={passwordTarget !== null}
-        target={passwordTarget}
-        onClose={() => setPasswordTarget(null)}
-        dispatch={dispatch}
-        secretFolderUnlocked={state.secretFolderUnlocked}
-        fieldChannelUnlocked={state.fieldChannelUnlocked}
-        lensLayerUnlocked={state.lensLayerUnlocked}
-      />
-      <header className="window-head">
-        <span>Проводник · копия ПК</span>
-        <button type="button" className="win-close" onClick={onClose}>
-          ×
-        </button>
-      </header>
+    <div className="files-window files-window--embedded">
       <nav className="breadcrumbs" aria-label="Путь">
         {crumbs.map((c, i) => (
           <span key={c.id}>
@@ -98,9 +80,13 @@ export function FilesApp({
             <button
               type="button"
               className="bc-btn"
-              onClick={() => {
-                onDir(c.id)
-              }}
+              onClick={() =>
+                dispatch({
+                  type: 'FILE_WINDOW_SET_DIR',
+                  windowId,
+                  dirId: c.id,
+                })
+              }
             >
               {c.name}
             </button>
@@ -109,80 +95,99 @@ export function FilesApp({
       </nav>
       <div className="files-split">
         <ul className="files-list">
-          {dirNode?.type === 'dir' && dirNode.children
-            ? dirNode.children.map((child) => {
-                const locked = isNodeLocked(child, state)
-                return (
-                  <li key={child.id}>
-                    <button
-                      type="button"
-                      className={`file-row ${state.filesSelectedFileId === child.id ? 'active' : ''}`}
-                      onClick={() => {
-                        if (child.type === 'dir' && locked) {
-                          if (child.id === 'dir-sealed') {
-                            setPasswordTarget('secret')
-                          } else if (child.id === 'dir-field-channel') {
-                            setPasswordTarget('field')
-                          } else if (child.id === 'dir-lens-layer') {
-                            setPasswordTarget('metadata')
-                          }
-                          return
-                        }
-                        if (child.type === 'dir') {
-                          onDir(child.id)
-                          return
-                        }
-                        onSelectFile(child.id)
-                        onViewFile(child.id)
-                      }}
-                    >
-                      <span className="ico">
-                        {child.type === 'dir'
-                          ? '📁'
-                          : child.fileKind === 'photo-lsb' ||
-                              child.fileKind === 'photo-contrast'
-                            ? '📷'
-                            : child.fileKind === 'audio-spectrogram'
-                              ? '🎵'
-                              : child.fileKind === 'photo-exif-metadata'
-                                ? '📷'
-                                : '📄'}
-                      </span>
-                      <span>
-                        {child.name}
-                        {locked && <span className="lock"> 🔒</span>}
-                      </span>
-                    </button>
-                  </li>
-                )
-              })
-            : null}
+          {children.map((child) => (
+            <li key={child.id}>
+              <button
+                type="button"
+                className={`file-row ${filesSelectedFileId === child.id ? 'active' : ''}`}
+                onClick={() => {
+                  if (child.type === 'dir') {
+                    dispatch({
+                      type: 'FILE_WINDOW_SET_DIR',
+                      windowId,
+                      dirId: child.id,
+                    })
+                    return
+                  }
+                  if (child.fileKind === 'app-shortcut' && child.opensApp) {
+                    dispatch({
+                      type: 'OPEN_WINDOW',
+                      windowType: child.opensApp,
+                    })
+                    return
+                  }
+                  if (child.fileKind === 'text') {
+                    dispatch({
+                      type: 'FILE_WINDOW_SELECT_FILE',
+                      windowId,
+                      fileId: child.id,
+                    })
+                    dispatch({ type: 'MARK_FILE_VIEWED', id: child.id })
+                    dispatch({
+                      type: 'OPEN_WINDOW',
+                      windowType: 'notepad',
+                      notepadContent: child.content ?? '',
+                      notepadLabel: child.name,
+                    })
+                    return
+                  }
+                  dispatch({
+                    type: 'FILE_WINDOW_SELECT_FILE',
+                    windowId,
+                    fileId: child.id,
+                  })
+                  dispatch({ type: 'MARK_FILE_VIEWED', id: child.id })
+                }}
+              >
+                <span className="ico">{fileIcon(child)}</span>
+                <span>{child.name}</span>
+              </button>
+            </li>
+          ))}
         </ul>
         <div className="file-preview">
           {selectedNode?.type === 'file' &&
-            selectedNode.fileKind === 'photo-lsb' ? (
-            <StegoPhotoPanel
-              stegoExtractSeen={state.stegoExtractSeen}
-              dispatch={dispatch}
-            />
+          selectedNode.fileKind === 'app-shortcut' &&
+          selectedNode.opensApp ? (
+            <div className="shortcut-preview">
+              <p className="muted small">Ярлык приложения.</p>
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() =>
+                  dispatch({
+                    type: 'OPEN_WINDOW',
+                    windowType: selectedNode.opensApp!,
+                  })
+                }
+              >
+                Запустить:{' '}
+                {LAUNCH_LABEL[selectedNode.opensApp] ?? selectedNode.opensApp}
+              </button>
+            </div>
           ) : selectedNode?.type === 'file' &&
-            selectedNode.fileKind === 'photo-contrast' ? (
-            <ContrastPhotoPanel
-              contrastHintSeen={state.contrastHintSeen}
-              dispatch={dispatch}
-            />
-          ) : selectedNode?.type === 'file' &&
-            selectedNode.fileKind === 'audio-spectrogram' ? (
-            <AudioEvidencePanel
-              audioSpectrogramSeen={state.audioSpectrogramSeen}
-              dispatch={dispatch}
-            />
-          ) : selectedNode?.type === 'file' &&
-            selectedNode.fileKind === 'photo-exif-metadata' ? (
-            <ExifPhotoPanel
-              metadataExifSeen={state.metadataExifSeen}
-              dispatch={dispatch}
-            />
+            selectedNode.fileKind === 'text' ? (
+            <div className="text-preview">
+              {selectedNode.content ? (
+                <pre className="preview-pre">{selectedNode.content}</pre>
+              ) : (
+                <p className="muted small">Пустой файл.</p>
+              )}
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() =>
+                  dispatch({
+                    type: 'OPEN_WINDOW',
+                    windowType: 'notepad',
+                    notepadContent: selectedNode.content ?? '',
+                    notepadLabel: selectedNode.name,
+                  })
+                }
+              >
+                Открыть в блокноте
+              </button>
+            </div>
           ) : selectedNode?.type === 'file' && selectedNode.content ? (
             <pre className="preview-pre">{selectedNode.content}</pre>
           ) : (

@@ -1,41 +1,86 @@
 export type GamePhase = 'title' | 'workbench' | 'boot' | 'desktop'
 
+export type AppWindowType =
+  | 'files'
+  | 'mail'
+  | 'calendar'
+  | 'terminal'
+  | 'notepad'
+  | 'browser'
+  | 'image-editor'
+  | 'audio-player'
+  | 'video-player'
+  | 'solitaire'
+  | 'tetris'
+  | 'chess'
+
+export interface ShellWindow {
+  id: string
+  type: AppWindowType
+  title: string
+  x: number
+  y: number
+  width: number
+  height: number
+  zIndex: number
+  minimized: boolean
+  filesDirId?: string
+  filesSelectedFileId?: string | null
+  mailOpenId?: string | null
+  /** Содержимое при открытии из файла */
+  notepadContent?: string
+}
+
+export interface BrowserBookmark {
+  id: string
+  title: string
+  url: string
+}
+
+export interface BrowserHistoryItem {
+  id: string
+  title: string
+  url: string
+  at: number
+}
+
+export interface CalendarEntry {
+  id: string
+  dateKey: string
+  title: string
+  body: string
+}
+
 export interface GameState {
-  version: 2
+  version: 5
   phase: GamePhase
   bootFinished: boolean
-  mailOpenId: string | null
-  filesDirId: string
-  filesSelectedFileId: string | null
-  activeApp: 'mail' | 'files' | 'terminal' | null
+  windows: ShellWindow[]
+  focusedWindowId: string | null
+  calendarEntries: CalendarEntry[]
+  browserBookmarks: BrowserBookmark[]
+  browserHistory: BrowserHistoryItem[]
   readMailIds: string[]
-  secretFolderUnlocked: boolean
-  fieldChannelUnlocked: boolean
-  lensLayerUnlocked: boolean
-  stegoExtractSeen: boolean
-  contrastHintSeen: boolean
-  audioSpectrogramSeen: boolean
-  metadataExifSeen: boolean
   viewedFileIds: string[]
   terminalAttempts: number
 }
 
 export const INITIAL_STATE: GameState = {
-  version: 2,
+  version: 5,
   phase: 'title',
   bootFinished: false,
-  mailOpenId: null,
-  filesDirId: 'root',
-  filesSelectedFileId: null,
-  activeApp: null,
+  windows: [],
+  focusedWindowId: null,
+  calendarEntries: [],
+  browserBookmarks: [
+    {
+      id: 'bm-obsidian-home',
+      title: 'OBSIDIAN CATHEDRAL — домашняя',
+      url: 'shell:home',
+    },
+  ],
+  browserHistory: [],
   readMailIds: [],
-  secretFolderUnlocked: false,
-  fieldChannelUnlocked: false,
-  lensLayerUnlocked: false,
-  stegoExtractSeen: false,
-  contrastHintSeen: false,
-  audioSpectrogramSeen: false,
-  metadataExifSeen: false,
   viewedFileIds: [],
   terminalAttempts: 0,
 }
@@ -45,18 +90,29 @@ export type GameAction =
   | { type: 'NEW_GAME' }
   | { type: 'SET_PHASE'; phase: GamePhase }
   | { type: 'BOOT_DONE' }
-  | { type: 'OPEN_APP'; app: GameState['activeApp'] }
-  | { type: 'CLOSE_APP' }
+  | {
+      type: 'OPEN_WINDOW'
+      windowType: AppWindowType
+      title?: string
+      filesDirId?: string
+      notepadContent?: string
+      notepadLabel?: string
+    }
+  | { type: 'CLOSE_WINDOW'; id: string }
+  | { type: 'FOCUS_WINDOW'; id: string }
+  | { type: 'MINIMIZE_WINDOW'; id: string }
+  | { type: 'RESTORE_WINDOW'; id: string }
+  | { type: 'MOVE_WINDOW'; id: string; x: number; y: number }
+  | { type: 'RESIZE_WINDOW'; id: string; width: number; height: number }
+  | { type: 'SET_WINDOW_TITLE'; id: string; title: string }
+  | { type: 'FILE_WINDOW_SET_DIR'; windowId: string; dirId: string }
+  | { type: 'FILE_WINDOW_SELECT_FILE'; windowId: string; fileId: string | null }
+  | { type: 'MAIL_WINDOW_SET_OPEN'; windowId: string; mailId: string | null }
   | { type: 'MARK_MAIL_READ'; id: string }
-  | { type: 'SET_MAIL_OPEN'; id: string | null }
-  | { type: 'SET_FILES_DIR'; dirId: string }
-  | { type: 'SELECT_FILE'; fileId: string | null }
   | { type: 'MARK_FILE_VIEWED'; id: string }
-  | { type: 'UNLOCK_SECRET_FOLDER' }
-  | { type: 'UNLOCK_FIELD_CHANNEL' }
-  | { type: 'UNLOCK_LENS_LAYER' }
   | { type: 'TERMINAL_FAIL' }
-  | { type: 'STEGO_EXTRACT_SEEN' }
-  | { type: 'CONTRAST_HINT_SEEN' }
-  | { type: 'AUDIO_SPECTROGRAM_SEEN' }
-  | { type: 'EXIF_METADATA_SEEN' }
+  | { type: 'CALENDAR_ADD_ENTRY'; dateKey: string; title: string; body: string }
+  | { type: 'CALENDAR_DELETE_ENTRY'; id: string }
+  | { type: 'BROWSER_ADD_BOOKMARK'; title: string; url: string }
+  | { type: 'BROWSER_REMOVE_BOOKMARK'; id: string }
+  | { type: 'BROWSER_RECORD_VISIT'; title: string; url: string }

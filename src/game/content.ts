@@ -1,268 +1,50 @@
-import type { GameState } from './types'
+import type { AppWindowType, GameState } from './types'
 
-/** Открывает папку «Личный архив» (терминал или проводник) */
-export const SECRET_FOLDER_PASSWORD = 'blackwood'
+export type AppShortcut = Exclude<AppWindowType, 'files'>
 
-/** Второй снимок — проявляется контрастом; пригодится позже в сюжете */
-export const FUTURE_PASSWORD_HINT = 'OMEN-776'
-
-/** Пароль в морзе на аудиодорожке; открывает папку «Полевой канал» */
-export const AUDIO_MORSE_PASSWORD = 'winter'
-
-/** Сегмент пути и имя папки в проводнике */
-export const LOCKED_FOLDER_NAME = 'Личный архив'
-
-/** Вторая запертая папка — по паролю из записи */
-export const FIELD_CHANNEL_FOLDER_NAME = 'Полевой канал'
-
-/** Пароль из поля UserComment в EXIF кадра `objekt_5_13.jpg` → папка «Слой съёмки» */
-export const EXIF_METADATA_PASSWORD = 'obj513'
-
-/** Третья запертая папка */
-export const METADATA_LAYER_FOLDER_NAME = 'Слой съёмки'
-
-/** Кадр объекта с метаданными (оригинал в `public/`) */
-export const METADATA_PHOTO_FILENAME = 'objekt_5_13.jpg'
-export const METADATA_PHOTO_PATH = '/objekt_5_13.jpg'
-
-/** Стего-снимок в `public/` (LSB уже в файле) */
-export const STEGO_ASSET_FILENAME = 'image (1).png'
-/** Пробел в имени — кодируем для URL */
-export const STEGO_ASSET_PATH = '/image%20(1).png'
-
-/** Размытый скрин — проявляется контрастом (`скрин_монитор_размыто.jpg` в проводнике) */
-export const CONTRAST_ASSET_FILENAME = 'skrin_monitor_razmyto (2).png'
-export const CONTRAST_ASSET_PATH = '/skrin_monitor_razmyto%20(2).png'
-
-/** Запись с объекта «−13» — сырая дорожка в `public/` */
-export const AUDIO_ASSET_FILENAME = 'zapis_diktofon_minus13.wav'
-export const AUDIO_ASSET_PATH = '/zapis_diktofon_minus13.wav'
-
-export function secretFolderPrefixes(): string[] {
-  const base = '/' + LOCKED_FOLDER_NAME
-  return [base, base + '/']
+export const WINDOW_DEFAULTS: Record<
+  AppWindowType,
+  { width: number; height: number; title: string }
+> = {
+  files: { width: 600, height: 480, title: 'Проводник' },
+  mail: { width: 640, height: 440, title: 'Почта' },
+  calendar: { width: 420, height: 520, title: 'Календарь' },
+  terminal: { width: 520, height: 420, title: 'Терминал' },
+  notepad: { width: 500, height: 440, title: 'Блокнот' },
+  'image-editor': { width: 640, height: 520, title: 'Редактор изображений' },
+  'audio-player': { width: 420, height: 200, title: 'Аудио плеер' },
+  'video-player': { width: 480, height: 320, title: 'Видео плеер' },
+  solitaire: { width: 760, height: 580, title: 'Пасьянс' },
+  tetris: { width: 380, height: 480, title: 'Тетрис' },
+  chess: { width: 440, height: 520, title: 'Шахматы' },
+  browser: { width: 720, height: 520, title: 'Браузер' },
 }
 
-export function isInsideSecretFolder(absPath: string): boolean {
-  const n =
-    absPath === '' || absPath === '/'
-      ? '/'
-      : absPath.replace(/\/+$/, '') || '/'
-  const sealed = '/' + LOCKED_FOLDER_NAME
-  return n === sealed || n.startsWith(sealed + '/')
-}
-
-export function isInsideFieldChannel(absPath: string): boolean {
-  const n =
-    absPath === '' || absPath === '/'
-      ? '/'
-      : absPath.replace(/\/+$/, '') || '/'
-  const p = '/' + FIELD_CHANNEL_FOLDER_NAME
-  return n === p || n.startsWith(p + '/')
-}
-
-export function isInsideMetadataLayer(absPath: string): boolean {
-  const n =
-    absPath === '' || absPath === '/'
-      ? '/'
-      : absPath.replace(/\/+$/, '') || '/'
-  const p = '/' + METADATA_LAYER_FOLDER_NAME
-  return n === p || n.startsWith(p + '/')
-}
-
-export type MailDef = {
-  id: string
-  from: string
-  subject: string
-  date: string
-  body: string
-  visible: (s: GameState) => boolean
-}
-
-export const MAILS: MailDef[] = [
-  {
-    id: 'spam-vitamins',
-    from: 'SuperSale <noreply@megavitamins.ru>',
-    subject: '−70% на омегу только сегодня',
-    date: 'вчера',
-    visible: () => true,
-    body: `Дорогой клиент!
-
-Акция сгорает через 3 часа. Код WINTER не действует.
-
-Отписаться можно, но мы всё равно попробуем ещё раз :)`,
-  },
-  {
-    id: 'friend-dima',
-    from: 'Дима К. <d.kozlov@mail.ru>',
-    subject: 'ты живой?',
-    date: '12 мар',
-    visible: () => true,
-    body: `Йо. Ты пропал после той вечеринки. Напиши хоть «норм», а то мамка опять спрашивает.
-
-Кстати долг за пиццу не забудь ))`,
-  },
-  {
-    id: 'work-newsletter',
-    from: 'HR Портал <news@staff-portal.local>',
-    subject: 'Ежемесячная рассылка — абонемент в спортзал',
-    date: '10 мар',
-    visible: () => true,
-    body: `Коллеги, напоминаем о льготном абонементе до 15 числа.
-
-С уважением, отдел мотивации.`,
-  },
-  {
-    id: 'stego-article',
-    from: 'Дайджест безопасности <digest@sec-notes.io>',
-    subject: 'Подборка: стеганография в бытовых JPEG',
-    date: '8 мар',
-    visible: () => true,
-    body: `Добрый день.
-
-В номере — обзор, как в «обычных» фото прячут текст, меняя младшие биты цвета. Глаз не видит, а скрипт вытаскивает строку.
-
-Практика: если картинка «пустая», а размер подозрительно велик — попробуйте простой LSB-декодер или посмотрите метаданные.
-
-Онлайн-сервис для кодирования и извлечения сообщений из изображений: https://stego.app/
-
-Читать: https://example.org/stego-intro (вырезка для внутреннего курса)
-
-— Редколлегия.`,
-  },
-  {
-    id: 'field-channel-unlocked',
-    from: 'нет отправителя',
-    subject: 'ты открыл канал',
-    date: 'сейчас',
-    visible: (s) => s.fieldChannelUnlocked,
-    body: `Физический слой совпал с цифровым. Ты услышал то, что на бумаге не напечатают.
-
-Вторая подсказка всё ещё на картинке с монитором — там другая игра, не морзе.
-
-Смотри на почту. Смотри на файл.
-
-— Н.`,
-  },
-  {
-    id: 'lab-audio-spectrogram',
-    from: 'Секция акустики <acoustic@forensic-lab.local>',
-    subject: 'Слабые вызовы и азбука Морзе',
-    date: '7 мар',
-    visible: () => true,
-    body: `Коллеги, при разборе записей не останавливайтесь на одном прослушивании.
-
-На полевых копиях слабая несущая и «телеграф» (Морзе) удобнее держать в спектрограмме (Audacity → Spectrogram, Sonic Visualiser).
-
-Расшифровка — таблица ITU; пауза между буквами длиннее, чем между точкой и тире внутри буквы.
-
-На учебной копии ноутбука дорожка в «Документах» без лишнего шума: так проще отработать слухом, затем — встроенный спектр в проводнике.
-
-— Лаборатория.`,
-  },
-  {
-    id: 'it-exif-hint',
-    from: 'ИТ поддержка <helpdesk@staff-portal.local>',
-    subject: 'Мини-гайд: EXIF у снимков',
-    date: '6 мар',
-    visible: () => true,
-    body: `Коллеги, при приёме цифровых вещдоков заглядывайте в свойства файла: блоки EXIF/XMP иногда содержат служебные строки, которых нет на самом изображении (комментарий съёмки, внутренний код, хвост синхронизации камеры).
-
-В полевых условиях — exiftool, «Свойства» в Проводнике Windows, «информация» в Preview на macOS, любой просмотрщик с EXIF. Файл objekt_5_13.jpg на копии носителя содержит настоящие EXIF: тот же набор можно увидеть и в игре после «Прочитать метаданные», и скачав оригинал.
-
-Служебные строки в комментариях к файлу встречаются чаще, чем хочется.`,
-  },
-  {
-    id: 'spam-bank',
-    from: '«Банк» <security-urgent@fake-bank.xyz>',
-    subject: 'СРОЧНО: блокировка карты',
-    date: '7 мар',
-    visible: () => true,
-    body: `Уважаемый клиент. Мы заблокировали ваш счёт. Перейдите по ссылке и введите CVV.
-
-(это фишинг, даже не открывайте — но подозреваемый открыл)`,
-  },
-  {
-    id: 'mom',
-    from: 'мама',
-    subject: 'рецепт борща фото пришлю',
-    date: '6 мар',
-    visible: () => true,
-    body: `Сынок, купи сметану нормальную, не ту что в прошлый раз.
-
-Целую.`,
-  },
-  {
-    id: 'steam-sale',
-    from: 'Steam <noreply@steampowered.com>',
-    subject: 'В вашем списке желаемого скидка',
-    date: '5 мар',
-    visible: () => true,
-    body: `Одна из игр из списка желаемого сейчас со скидкой 40%.
-
-Спасибо что играете с нами.`,
-  },
-  {
-    id: 'dentist',
-    from: 'Клиника «Улыбка» <info@smile-dent.ru>',
-    subject: 'Напоминание: чистка',
-    date: '3 мар',
-    visible: () => true,
-    body: `Здравствуйте! Напоминаем о записи на профгигиену.
-
-Если не актуально — проигнорируйте.`,
-  },
-  {
-    id: 'killer-invite',
-    from: 'без адреса <void>',
-    subject: 'Ты открыл дверь',
-    date: 'только что',
-    visible: (s) => s.secretFolderUnlocked,
-    body: `Ты вошёл туда, куда тебя не звали. Мило.
-
-Раз уж ты любишь копаться в чужих вещах — давай сыграем. У меня есть правила, у тебя есть совесть (если найдёшь).
-
-На кону не абстракция — люди, которых ты ещё можешь не видеть. Или уже видел, но не заметил.
-
-Дальше будет интереснее. Не закрывай почту.
-
-— Наблюдатель.`,
-  },
-  {
-    id: 'killer-lens-layer',
-    from: 'без адреса <void>',
-    subject: 'Ты поднял слой',
-    date: 'только что',
-    visible: (s) => s.lensLayerUnlocked,
-    body: `Ты полез не в пиксели, а в подпись к файлу. Аккуратно. Скучные люди смотрят только на картинку.
-
-Пароль из комментария — ключ от моей маленькой полки. Ты доказал, что умеешь читать то, что не светится на экране.
-
-Дальше — не здесь. Тот самый OMEN, что ты выцарапал из другого кадра, всё ещё ждёт своей очереди.
-
-Игра продолжается. Не зевай.
-
-— Наблюдатель.`,
-  },
+export const START_MENU_PROGRAMS: { type: AppWindowType; label: string }[] = [
+  { type: 'calendar', label: 'Календарь' },
+  { type: 'mail', label: 'Почта' },
+  { type: 'image-editor', label: 'Редактор изображений' },
+  { type: 'audio-player', label: 'Аудио плеер' },
+  { type: 'video-player', label: 'Видео плеер' },
+  { type: 'notepad', label: 'Блокнот' },
+  { type: 'browser', label: 'Браузер' },
+  { type: 'terminal', label: 'Терминал' },
 ]
 
-export function getVisibleMails(state: GameState): MailDef[] {
-  return MAILS.filter((m) => m.visible(state))
-}
+export const START_MENU_GAMES: { type: AppWindowType; label: string }[] = [
+  { type: 'solitaire', label: 'Пасьянс' },
+  { type: 'tetris', label: 'Тетрис' },
+  { type: 'chess', label: 'Шахматы' },
+]
 
-export type FileKind =
-  | 'text'
-  | 'photo-lsb'
-  | 'photo-contrast'
-  | 'photo-exif-metadata'
-  | 'audio-spectrogram'
+export type FileKind = 'text' | 'app-shortcut'
 
 export type FileNode = {
   id: string
   name: string
   type: 'dir' | 'file'
   fileKind?: FileKind
-  lockedIf?: (s: GameState) => boolean
+  opensApp?: AppShortcut
   content?: string
   children?: FileNode[]
 }
@@ -270,38 +52,21 @@ export type FileNode = {
 export const FILE_TREE: FileNode[] = [
   {
     id: 'root',
-    name: 'Пользователь',
+    name: 'Ноутбук',
     type: 'dir',
     children: [
       {
-        id: 'dir-desktop',
-        name: 'Рабочий стол',
-        type: 'dir',
-        children: [
-          {
-            id: 'lnk-readme',
-            name: 'Корзина — ярлык.txt',
-            type: 'file',
-            content: 'Ярлык битый. Ничего полезного.',
-          },
-        ],
-      },
-      {
-        id: 'dir-documents',
+        id: 'dir-docs',
         name: 'Документы',
         type: 'dir',
         children: [
           {
-            id: 'doc-draft',
-            name: 'черновик_резюме.docx.txt',
+            id: 'doc-welcome',
+            name: 'Добро пожаловать.txt',
             type: 'file',
-            content: 'Черновик не закончен. Навыки: Excel, «общительность».',
-          },
-          {
-            id: 'doc-audio-minus13',
-            name: 'zapis_diktofon_minus13.wav',
-            type: 'file',
-            fileKind: 'audio-spectrogram',
+            fileKind: 'text',
+            content:
+              'Документы — ваши файлы.\n\nСистемные папки находятся в проводнике: Загрузки, Изображения, Музыка, Видео, Программы, Игры, Корзина.',
           },
         ],
       },
@@ -309,136 +74,151 @@ export const FILE_TREE: FileNode[] = [
         id: 'dir-downloads',
         name: 'Загрузки',
         type: 'dir',
-        children: [
-          {
-            id: 'dl-installer',
-            name: 'Setup.exe-remove-me.txt',
-            type: 'file',
-            content: 'Фейковый инсталлятор уже удалён. Остался только текстовый лог загрузки.',
-          },
-          {
-            id: 'dl-torrent',
-            name: 'readme_first.txt',
-            type: 'file',
-            content: 'Спасибо что скачали. Пароль к архиву в описании раздачи — шутка, тут пусто.',
-          },
-        ],
+        children: [],
       },
       {
-        id: 'dir-pictures',
+        id: 'dir-images',
         name: 'Изображения',
         type: 'dir',
-        children: [
-          {
-            id: 'photo-lsb',
-            name: STEGO_ASSET_FILENAME,
-            type: 'file',
-            fileKind: 'photo-lsb',
-          },
-          {
-            id: 'photo-contrast',
-            name: 'скрин_монитор_размыто.jpg',
-            type: 'file',
-            fileKind: 'photo-contrast',
-          },
-          {
-            id: 'photo-exif-obj',
-            name: 'objekt_5_13.jpg',
-            type: 'file',
-            fileKind: 'photo-exif-metadata',
-          },
-        ],
-      },
-      {
-        id: 'dir-videos',
-        name: 'Видео',
-        type: 'dir',
-        children: [
-          {
-            id: 'vid-placeholder',
-            name: 'пусто.txt',
-            type: 'file',
-            content: 'Папка пустая. Запись с регистратора удалена или не сюда.',
-          },
-        ],
+        children: [],
       },
       {
         id: 'dir-music',
         name: 'Музыка',
         type: 'dir',
+        children: [],
+      },
+      {
+        id: 'dir-videos',
+        name: 'Видео',
+        type: 'dir',
+        children: [],
+      },
+      {
+        id: 'dir-programs',
+        name: 'Программы',
+        type: 'dir',
         children: [
           {
-            id: 'mus-playlist',
-            name: 'плейлист_погода.m3u.txt',
+            id: 'app-calendar',
+            name: 'Календарь.app',
             type: 'file',
-            content: 'track1.mp3\ntrack2.mp3\n...',
+            fileKind: 'app-shortcut',
+            opensApp: 'calendar',
+          },
+          {
+            id: 'app-mail',
+            name: 'Почта.app',
+            type: 'file',
+            fileKind: 'app-shortcut',
+            opensApp: 'mail',
+          },
+          {
+            id: 'app-image-editor',
+            name: 'Редактор изображений.app',
+            type: 'file',
+            fileKind: 'app-shortcut',
+            opensApp: 'image-editor',
+          },
+          {
+            id: 'app-audio',
+            name: 'Аудио плеер.app',
+            type: 'file',
+            fileKind: 'app-shortcut',
+            opensApp: 'audio-player',
+          },
+          {
+            id: 'app-video',
+            name: 'Видео плеер.app',
+            type: 'file',
+            fileKind: 'app-shortcut',
+            opensApp: 'video-player',
+          },
+          {
+            id: 'app-notepad',
+            name: 'Блокнот.app',
+            type: 'file',
+            fileKind: 'app-shortcut',
+            opensApp: 'notepad',
+          },
+          {
+            id: 'app-browser',
+            name: 'Браузер.app',
+            type: 'file',
+            fileKind: 'app-shortcut',
+            opensApp: 'browser',
+          },
+          {
+            id: 'app-terminal',
+            name: 'Терминал.app',
+            type: 'file',
+            fileKind: 'app-shortcut',
+            opensApp: 'terminal',
           },
         ],
       },
       {
-        id: 'dir-sealed',
-        name: LOCKED_FOLDER_NAME,
+        id: 'dir-games',
+        name: 'Игры',
         type: 'dir',
-        lockedIf: (s) => !s.secretFolderUnlocked,
         children: [
           {
-            id: 'sealed-note',
-            name: 'следующий_ход.txt',
+            id: 'game-solitaire',
+            name: 'Пасьянс.app',
             type: 'file',
-            content: `Ты не должен был так быстро дойти до сути.
-
-Но раз дошёл — сохраняй холод в голове. Следующая заготовка уже не на этом диске.
-
-Почта. Всегда почта.`,
+            fileKind: 'app-shortcut',
+            opensApp: 'solitaire',
+          },
+          {
+            id: 'game-tetris',
+            name: 'Тетрис.app',
+            type: 'file',
+            fileKind: 'app-shortcut',
+            opensApp: 'tetris',
+          },
+          {
+            id: 'game-chess-app',
+            name: 'Шахматы.app',
+            type: 'file',
+            fileKind: 'app-shortcut',
+            opensApp: 'chess',
           },
         ],
       },
       {
-        id: 'dir-field-channel',
-        name: FIELD_CHANNEL_FOLDER_NAME,
+        id: 'dir-trash',
+        name: 'Корзина',
         type: 'dir',
-        lockedIf: (s) => !s.fieldChannelUnlocked,
-        children: [
-          {
-            id: 'field-note',
-            name: 'канал_открыт.txt',
-            type: 'file',
-            content: `Голос по «Полевому каналу» — это не метафора. Ты прошёл по паролю из морзе.
-
-Дальше не вслух: вторая метка заложена на размытом скрине с монитора (Изображения). Там уже не точка‑тире — смотри уровни яркости и контраст.
-
-Код с того кадра пригодится позже в сети — не выбрасывай.
-
-— архив полевых записей`,
-          },
-        ],
-      },
-      {
-        id: 'dir-lens-layer',
-        name: METADATA_LAYER_FOLDER_NAME,
-        type: 'dir',
-        lockedIf: (s) => !s.lensLayerUnlocked,
-        children: [
-          {
-            id: 'lens-readme',
-            name: 'приложение_к_кадру.txt',
-            type: 'file',
-            content: `Слой съёмки открыт по строке из EXIF. Кто вписал UserComment — уже не владелец камеры.
-
-OMEN-776 остаётся машинным хвостом с другого носителя. Здесь — только подтверждение: объект «−13» и время кадра не случайны.
-
-Следующий ход не на этом томе. Проверь почту после полуночи по местному — если ещё не пришло, ты опоздал не по времени, а по жанру.
-
-— тот же архивариус`,
-          },
-        ],
+        children: [],
       },
     ],
   },
 ]
 
-export function isNodeLocked(node: FileNode, state: GameState): boolean {
-  return node.lockedIf ? node.lockedIf(state) : false
+export type MailDef = {
+  id: string
+  from: string
+  subject: string
+  date: string
+  body: string
+  to?: string
+  visible: (s: GameState) => boolean
+}
+
+export const MAILS: MailDef[] = [
+  {
+    id: 'm1',
+    from: 'Система',
+    subject: 'Добро пожаловать',
+    date: '2026-03-29',
+    body:
+      'Почта готова к работе.\n\nПрограммы и игры запускайте из папок «Программы» и «Игры» в проводнике или с ярлыков на рабочем столе.',
+    visible: () => true,
+  },
+]
+
+export function getVisibleMails(state: GameState): MailDef[] {
+  return MAILS.filter((m) => m.visible(state))
 }
 
 export function findNodeById(
@@ -455,7 +235,6 @@ export function findNodeById(
   return null
 }
 
-/** Сохранения могли устареть — несуществующая папка даёт пустой проводник. */
 export function resolveFilesDirId(id: string | undefined | null): string {
   if (typeof id !== 'string' || id === '') return 'root'
   const n = findNodeById(FILE_TREE, id)
