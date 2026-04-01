@@ -12,13 +12,14 @@ export function ImageEditorApp({ mediaFileId = null }: Props) {
   const imgRef = useRef<HTMLImageElement | null>(null)
   const fid = useId()
   const mediaSrc = useMemo(() => {
+    const base = import.meta.env.BASE_URL
     const map: Record<string, string> = {
-      'img-wallpaper1': '/Desktop_Mirror/wallpaper1.png',
-      'img-screen-old': '/Desktop_Mirror/screen_old.jpg',
-      'img-family': '/Desktop_Mirror/family_photo.png',
-      'img-freeze': '/Desktop_Mirror/screenshot_freeze.png',
-      'img-corrupted': '/Desktop_Mirror/image_corrupted.png',
-      'trash-img': '/Desktop_Mirror/image_corrupted.png',
+      'img-wallpaper1': `${base}Desktop_Mirror/wallpaper1.png`,
+      'img-screen-old': `${base}Desktop_Mirror/screen_old.jpg`,
+      'img-family': `${base}Desktop_Mirror/family_photo.png`,
+      'img-freeze': `${base}Desktop_Mirror/screenshot_freeze.png`,
+      'img-corrupted': `${base}Desktop_Mirror/image_corrupted.png`,
+      'trash-img': `${base}Desktop_Mirror/image_corrupted.png`,
     }
     return mediaFileId ? map[mediaFileId] ?? null : null
   }, [mediaFileId])

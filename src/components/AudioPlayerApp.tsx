@@ -11,11 +11,12 @@ export function AudioPlayerApp({ mediaFileId = null }: Props) {
   const beepFiredRef = useRef(false)
   const lastTimeRef = useRef(0)
   const mediaSrc = useMemo(() => {
+    const base = import.meta.env.BASE_URL
     const map: Record<string, string> = {
-      'track-hidden': '/music_cache/track_hidden.mp3',
-      'track-hidden-2': '/music_cache/track_hidden_2.mp3',
-      'song-old-1': '/music_cache/song_old_1.mp3',
-      'noise-test': '/music_cache/noise_test.mp3',
+      'track-hidden': `${base}music_cache/track_hidden.mp3`,
+      'track-hidden-2': `${base}music_cache/track_hidden_2.mp3`,
+      'song-old-1': `${base}music_cache/song_old_1.mp3`,
+      'noise-test': `${base}music_cache/noise_test.mp3`,
     }
     return mediaFileId ? map[mediaFileId] ?? null : null
   }, [mediaFileId])

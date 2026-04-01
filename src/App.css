@@ -1580,7 +1580,7 @@
 
 .desktop--shell .wallpaper--shell {
   background-color: #08050c;
-  background-image: url('/wallpaper.png');
+  background-image: url('wallpaper.png');
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
